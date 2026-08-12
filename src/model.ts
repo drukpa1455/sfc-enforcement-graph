@@ -62,6 +62,65 @@ export function inspectNode(graph: GraphData, id: string) {
   return { nodeIds, node, links, releases }
 }
 
+export function expandNodes(graph: GraphData, nodeIds: string[], limit = 80) {
+  const known = new Set(graph.nodes.map((node) => node.id))
+  const seeds = new Set(nodeIds.filter((id) => known.has(id)))
+  const expanded = new Set(seeds)
+  let truncated = false
+
+  for (const link of graph.links) {
+    const neighbor = seeds.has(link.source) ? link.target : seeds.has(link.target) ? link.source : undefined
+    if (!neighbor || expanded.has(neighbor)) continue
+    if (expanded.size === limit) {
+      truncated = true
+      continue
+    }
+    expanded.add(neighbor)
+  }
+
+  return { ...graphResult(graph, [...expanded]), truncated }
+}
+
+export function tracePath(graph: GraphData, sourceId: string, targetId: string) {
+  const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+  if (!nodes.has(sourceId) || !nodes.has(targetId)) {
+    return { ...graphResult(graph, []), error: 'Unknown path endpoint' }
+  }
+
+  const queue = [sourceId]
+  const previous = new Map<string, { nodeId: string; link: GraphLink }>()
+  const visited = new Set(queue)
+  const neighbors = new Map<string, Array<{ nodeId: string; link: GraphLink }>>()
+  for (const link of graph.links) {
+    addNeighbor(neighbors, link.source, link.target, link)
+    addNeighbor(neighbors, link.target, link.source, link)
+  }
+
+  for (let index = 0; index < queue.length && !visited.has(targetId); index += 1) {
+    const current = queue[index]
+    for (const step of neighbors.get(current) ?? []) {
+      if (visited.has(step.nodeId)) continue
+      visited.add(step.nodeId)
+      previous.set(step.nodeId, { nodeId: current, link: step.link })
+      queue.push(step.nodeId)
+    }
+  }
+
+  if (!visited.has(targetId)) return { ...graphResult(graph, []), error: 'No path found' }
+
+  const nodeIds = [targetId]
+  const links: GraphLink[] = []
+  while (nodeIds[0] !== sourceId) {
+    const step = previous.get(nodeIds[0])
+    if (!step) break
+    nodeIds.unshift(step.nodeId)
+    links.unshift(step.link)
+  }
+
+  const result = graphResult(graph, nodeIds)
+  return { ...result, links }
+}
+
 export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
   const visible = new Set(nodeIds)
   const nodes = graph.nodes.filter((node) => visible.has(node.id))
@@ -72,6 +131,23 @@ export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
     links,
     releases: graph.releases.filter((release) => releaseRefs.has(release.ref)),
   }
+}
+
+function graphResult(graph: GraphData, nodeIds: string[]) {
+  const known = new Set(graph.nodes.map((node) => node.id))
+  const orderedIds = [...new Set(nodeIds)].filter((id) => known.has(id))
+  return { nodeIds: orderedIds, ...focusGraph(graph, orderedIds) }
+}
+
+function addNeighbor(
+  neighbors: Map<string, Array<{ nodeId: string; link: GraphLink }>>,
+  sourceId: string,
+  nodeId: string,
+  link: GraphLink,
+) {
+  const list = neighbors.get(sourceId) ?? []
+  list.push({ nodeId, link })
+  neighbors.set(sourceId, list)
 }
 
 export function viewFromParts(parts: Array<{ type: string; state?: string; output?: unknown }>): GraphView | undefined {

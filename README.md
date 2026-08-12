@@ -24,4 +24,4 @@ npm start
 
 `data/graph.json` is derived and replaceable. Its node IDs are the shared identity between the renderer and agent tools. The backend exporter owns generation; the TypeScript schema rejects duplicate IDs and unknown link endpoints.
 
-The agent has two read-only tools: `search` finds nodes and `inspect` returns their immediate evidence-backed neighborhood. Each tool result carries a focused graph view; **Show all** restores the complete graph.
+The agent has four read-only tools: `search` finds nodes, `inspect` returns one immediate neighborhood, `expand` adds a relationship hop, and `trace` finds the shortest evidence-backed path between two nodes. Each tool result carries a focused graph view; **Show all** restores the complete graph.
