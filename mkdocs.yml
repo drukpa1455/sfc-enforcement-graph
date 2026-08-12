@@ -14,8 +14,8 @@ nav:
 
 theme:
   name: material
-  logo: assets/agos-mark.svg
-  favicon: assets/agos-favicon.svg
+  logo: assets/graph-mark.svg
+  favicon: assets/favicon.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -43,7 +43,7 @@ extra:
   generator: false
 
 extra_css:
-  - stylesheets/agos.css
+  - stylesheets/theme.css
 
 markdown_extensions:
   - admonition
