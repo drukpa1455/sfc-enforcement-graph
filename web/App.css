@@ -143,7 +143,14 @@ h1 {
   min-width: 0;
 }
 
-.sidebar > header { border-bottom: 1px solid var(--line); padding: 0.85rem 1rem; }
+.sidebar > header {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  height: 3.75rem;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+}
 .sidebar h2 { font-size: 0.85rem; font-weight: 600; margin: 0 0 0.2rem; }
 .sidebar header p, .empty, .status { color: var(--muted); font-size: 0.7rem; line-height: 1.4; margin: 0; }
 
