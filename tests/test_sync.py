@@ -119,7 +119,5 @@ def test_release_links_are_derived_from_raw_html(tmp_path: Path) -> None:
         links = database.connection.execute(
             "SELECT target_ref FROM release_links ORDER BY target_ref"
         ).fetchall()
-        related = database.related_releases("new")
 
     assert [row["target_ref"] for row in links] == ["24PR2", "25PR1"]
-    assert related == ["24PR2", "25PR1"]

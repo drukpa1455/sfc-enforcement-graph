@@ -17,6 +17,7 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     }
     with Database(tmp_path / "test.sqlite3") as database:
         database.save_release(raw)
+        database.save_release({**raw, "lang": "ZH", "html": '<a href="doc?refNo=24PR98">related</a>'})
         database.save_extraction(raw, SCHEMA_VERSION, "test-model", extraction(), None, None)
 
         graph = export_graph(database, "test-model")
@@ -32,6 +33,7 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     assert any(node["id"].startswith("entity:person:") for node in graph["nodes"])
     assert any(link["kind"] == "target_of" for link in graph["links"])
     assert any(link["kind"] == "references" for link in graph["links"])
+    assert "release:24PR98" not in ids
 
 
 def test_coalesces_exact_named_entities_across_releases(tmp_path: Path) -> None:

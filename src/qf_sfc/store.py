@@ -111,20 +111,15 @@ class Database:
             if not refs or raw["newsRefNo"] in refs:
                 yield raw
 
-    def related_releases(self, source_ref: str, language: str = "EN") -> list[str]:
-        rows = self.connection.execute(
-            "SELECT target_ref FROM release_links WHERE source_ref = ? AND language = ? ORDER BY target_ref",
-            (source_ref, language.upper()),
-        )
-        return [row["target_ref"] for row in rows]
-
-    def release_links(self, source_refs: set[str]) -> Iterable[tuple[str, str]]:
+    def release_links(self, source_refs: set[str], language: str) -> Iterable[tuple[str, str]]:
         if not source_refs:
             return
         placeholders = ",".join("?" for _ in source_refs)
         rows = self.connection.execute(
-            f"SELECT source_ref, target_ref FROM release_links WHERE source_ref IN ({placeholders}) ORDER BY source_ref, target_ref",
-            tuple(sorted(source_refs)),
+            f"""SELECT source_ref, target_ref FROM release_links
+            WHERE language = ? AND source_ref IN ({placeholders})
+            ORDER BY source_ref, target_ref""",
+            (language.upper(), *sorted(source_refs)),
         )
         yield from ((row["source_ref"], row["target_ref"]) for row in rows)
 
