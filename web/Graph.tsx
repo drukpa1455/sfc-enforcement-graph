@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
+import { Inspector } from './Inspector'
 import {
   EDGE_FAMILIES,
   NODE_FAMILIES,
@@ -42,12 +43,16 @@ const edgeDashes: Record<EdgeFamily, number[] | null> = {
 
 interface Props {
   graph: GraphData
+  completeGraph: GraphData
   unfilteredGraph: GraphData
   nodeFamilies: Set<NodeFamily>
   edgeFamilies: Set<EdgeFamily>
   onNodeFamilies: (value: Set<NodeFamily>) => void
   onEdgeFamilies: (value: Set<EdgeFamily>) => void
   selectedIds: string[]
+  selectedNodes: GraphNode[]
+  selectedLink?: GraphLink
+  onPrompt: (text: string) => void
   onSelectLink: (link: GraphLink) => void
   onSelectNodes: (ids: string[]) => void
   theme: Theme
@@ -55,12 +60,16 @@ interface Props {
 
 export function Graph({
   graph,
+  completeGraph,
   unfilteredGraph,
   nodeFamilies,
   edgeFamilies,
   onNodeFamilies,
   onEdgeFamilies,
   selectedIds,
+  selectedNodes,
+  selectedLink,
+  onPrompt,
   onSelectLink,
   onSelectNodes,
   theme,
@@ -109,6 +118,7 @@ export function Graph({
 
   const toggleNodeFamily = (family: NodeFamily) => onNodeFamilies(toggle(nodeFamilies, family))
   const toggleEdgeFamily = (family: EdgeFamily) => onEdgeFamilies(toggle(edgeFamilies, family))
+  const clearSelection = useCallback(() => onSelectNodes([]), [onSelectNodes])
   const resetFilters = () => {
     onNodeFamilies(new Set(NODE_FAMILIES))
     onEdgeFamilies(new Set(EDGE_FAMILIES))
@@ -191,6 +201,14 @@ export function Graph({
         />
       )}
       {!graph.nodes.length && <p className="graph-empty">No nodes match these filters.</p>}
+      <Inspector
+        graph={completeGraph}
+        nodes={selectedNodes}
+        link={selectedLink}
+        onPrompt={onPrompt}
+        onClose={clearSelection}
+        onSelect={onSelectNodes}
+      />
     </div>
   )
 }

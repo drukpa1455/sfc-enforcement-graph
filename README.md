@@ -5,8 +5,7 @@ Browse the graph directly, ask a grounded research agent, or query the same
 validated data through a public read-only API.
 
 <p align="center">
-  <img src="docs/screenshots/overview-dark.png" alt="SFC Enforcement Graph in dark split view with its symbology key" width="720">
-  <img src="docs/screenshots/mobile-light.png" alt="Responsive SFC Enforcement Graph in light split view" width="240">
+  <img src="docs/screenshots/demo.gif" alt="Sapphire graph exploration, symbology, node inspection, and grounded research-agent interaction" width="800">
 </p>
 
 ```text
