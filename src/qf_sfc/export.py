@@ -42,7 +42,7 @@ def export_graph(
         )
         project_release(ref, extraction, nodes, links)
 
-    for source_ref, target_ref in database.release_links(known_releases):
+    for source_ref, target_ref in database.release_links(known_releases, language):
         target_id = f"release:{target_ref}"
         if target_ref not in known_releases:
             add_node(nodes, node(target_id, target_ref, "release", "Referenced SFC release not stored locally.", target_ref))

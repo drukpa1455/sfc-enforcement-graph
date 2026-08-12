@@ -18,6 +18,8 @@ SFC releases → SQLite → typed extraction → graph.json
   instruments while leaving generic groups source-local.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
   filter reversible.
+- Switches between a recent overview and the complete graph, with node- and
+  edge-type filters for direct exploration.
 - Opens with the latest 50 releases, primary subjects, matters, risks, and
   actions; the agent still queries and focuses the complete graph.
 
