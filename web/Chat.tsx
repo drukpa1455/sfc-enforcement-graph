@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { compactChatHistory } from '../shared/chat'
 import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from '../shared/graph'
 import { viewEventFromMessage } from '../shared/graph'
 
@@ -16,7 +17,12 @@ interface Props {
 }
 
 export function Chat({ graph, selected, selectedLink, headerAction, view, viewReset, onSelect, onView }: Props) {
-  const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), [])
+  const transport = useMemo(() => new DefaultChatTransport({
+    api: '/api/chat',
+    prepareSendMessagesRequest: ({ messages, body }) => ({
+      body: { ...body, messages: compactChatHistory(messages) },
+    }),
+  }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
   const appliedView = useRef<string | undefined>(undefined)
