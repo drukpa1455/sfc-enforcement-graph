@@ -3,7 +3,14 @@ from copy import deepcopy
 import pytest
 from pydantic import ValidationError
 
-from sfc_enforcement_graph.models import ActionFamily, ActionType, ReleaseExtraction, RiskFamily, RiskType
+from sfc_enforcement_graph.models import (
+    ActionFamily,
+    ActionType,
+    Period,
+    ReleaseExtraction,
+    RiskFamily,
+    RiskType,
+)
 
 
 def extraction() -> dict:
@@ -107,6 +114,12 @@ def test_accepts_graph_extraction() -> None:
     assert result.actions[0].period.start.isoformat() == "2026-07-03"
     assert "family" not in serialized["risks"][0]
     assert "family" not in serialized["actions"][0]
+
+
+def test_period_uses_its_exact_text_as_missing_evidence() -> None:
+    period = Period.model_validate({"text": "at the material time"})
+
+    assert period.evidence.quote == "at the material time"
 
 
 @pytest.mark.parametrize(
