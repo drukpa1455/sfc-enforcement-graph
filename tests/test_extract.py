@@ -1,14 +1,20 @@
+import asyncio
 import json
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
+from pydantic_ai import Agent
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
 from sfc_enforcement_graph.extract import (
     ExtractError,
     bounded_model,
+    extract_release,
     extract_releases,
     extract_text,
     repair_evidence_case,
@@ -101,6 +107,8 @@ def test_extract_releases_writes_validated_record(tmp_path: Path, monkeypatch) -
     assert call["model_settings"]["openai_reasoning_effort"] == "medium"
     assert call["model_settings"]["timeout"] == 180
     assert call["usage_limits"].request_limit == 1
+    assert call["usage"].requests == 0
+    assert call["retries"] == 0
     assert saved["source_ref"] == "sample"
     usage = json.loads(saved["usage_json"])
     assert (usage["input_tokens"], usage["output_tokens"]) == (10, 20)
@@ -136,6 +144,32 @@ def test_provider_fails_closed_when_retry_policy_is_unknown(monkeypatch) -> None
 
     with pytest.raises(ExtractError, match="retry policy is unknown"):
         single_attempt_provider("azure-responses")
+
+
+def test_invalid_output_exposes_validation_error_without_retry(monkeypatch) -> None:
+    raw = {
+        "newsRefNo": "sample",
+        "lang": "EN",
+        "title": "Sample",
+        "html": "<p>Example Limited</p>",
+        "issueDate": "2026-01-01",
+        "modificationTime": "2026-01-02",
+    }
+    usage = RunUsage()
+    model = TestModel(custom_output_args={"wrong": "value"})
+    monkeypatch.setattr("sfc_enforcement_graph.extract.bounded_model", lambda name: model)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        with pytest.raises(UnexpectedModelBehavior) as caught:
+            extract_release(Agent(output_type=ReleaseExtraction), raw, "test-model", 1_000, usage)
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
+
+    assert usage.requests == 1
+    assert isinstance(caught.value.__cause__, ValidationError)
 
 
 def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:
@@ -198,7 +232,8 @@ def test_parallel_extraction_saves_successes_before_reporting_failures(
 
     def run_sync(prompt: str, **kwargs):
         if '"reference": "bad"' in prompt:
-            raise RuntimeError("bad release")
+            kwargs["usage"].incr(RunUsage(requests=1, input_tokens=10, output_tokens=20))
+            raise RuntimeError("invalid output") from ValueError("missing field")
         return SimpleNamespace(output=extraction(), usage=RunUsage(), run_id="run_1")
 
     monkeypatch.setattr("sfc_enforcement_graph.extract.bounded_model", lambda model: model)
@@ -216,7 +251,7 @@ def test_parallel_extraction_saves_successes_before_reporting_failures(
                 }
             )
 
-        with pytest.raises(ExtractError, match="1 extraction.*bad"):
+        with pytest.raises(ExtractError, match="1 extraction.*bad.*invalid output"):
             extract_releases(
                 SimpleNamespace(run_sync=run_sync),
                 database,
@@ -230,3 +265,20 @@ def test_parallel_extraction_saves_successes_before_reporting_failures(
             )
 
         assert database.connection.execute("SELECT source_ref FROM extractions").fetchone()[0] == "good"
+        failed = database.connection.execute("SELECT * FROM extraction_failures").fetchone()
+        assert failed["source_ref"] == "bad"
+        assert failed["error_type"] == "RuntimeError"
+        assert failed["error_message"] == (
+            "RuntimeError: invalid output\nCaused by: ValueError: missing field"
+        )
+        assert json.loads(failed["usage_json"])["requests"] == 1
+
+        database.save_extraction(
+            next(database.releases("EN", {"bad"})),
+            EXTRACTION_VERSION,
+            "test-model",
+            extraction().model_dump(mode="json"),
+            "run_2",
+            None,
+        )
+        assert database.connection.execute("SELECT count(*) FROM extraction_failures").fetchone()[0] == 0

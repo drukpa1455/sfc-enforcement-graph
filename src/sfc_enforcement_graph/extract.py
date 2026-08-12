@@ -87,6 +87,7 @@ def extract_release(
     raw: dict[str, Any],
     model: str,
     max_output_tokens: int,
+    usage: RunUsage,
 ) -> tuple[ReleaseExtraction, Any]:
     ref = require_string(raw, "newsRefNo")
     title = require_string(raw, "title").strip()
@@ -106,6 +107,8 @@ def extract_release(
             "timeout": REQUEST_TIMEOUT_SECONDS,
         },
         usage_limits=UsageLimits(request_limit=1),
+        usage=usage,
+        retries=0,
     )
     extraction = repair_evidence_case(result.output, f"{title}\n{text}")
     validate_evidence(extraction, f"{title}\n{text}")
@@ -166,6 +169,17 @@ def evidence_objects(value: Any):
             yield from evidence_objects(child)
 
 
+def failure_diagnostic(error: Exception) -> str:
+    causes = []
+    seen = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        causes.append(f"{type(current).__name__}: {current}")
+        current = current.__cause__ or current.__context__
+    return "\nCaused by: ".join(causes)
+
+
 def extract_releases(
     agent: Agent[None, ReleaseExtraction],
     database: Database,
@@ -188,8 +202,12 @@ def extract_releases(
         pending.append(raw)
 
     def run(raw: dict[str, Any]):
-        extraction, result = extract_release(agent, raw, model, max_output_tokens)
-        return raw, extraction, result
+        usage = RunUsage()
+        try:
+            extraction, result = extract_release(agent, raw, model, max_output_tokens, usage)
+        except Exception as error:
+            return raw, None, None, error, usage
+        return raw, extraction, result, None, usage
 
     extracted = 0
     failures = []
@@ -197,11 +215,21 @@ def extract_releases(
         futures = {pool.submit(run, raw): raw for raw in pending}
         for future in concurrent.futures.as_completed(futures):
             raw = futures[future]
-            try:
-                raw, extraction, result = future.result()
-            except Exception as error:
+            raw, extraction, result, error, usage = future.result()
+            if error is not None:
+                diagnostic = failure_diagnostic(error)
+                database.save_extraction_failure(
+                    raw,
+                    EXTRACTION_VERSION,
+                    model,
+                    error,
+                    diagnostic,
+                    usage_adapter.dump_python(usage, mode="json"),
+                )
                 failures.append((require_string(raw, "newsRefNo"), error))
                 continue
+            if extraction is None or result is None:
+                raise ExtractError("extraction worker returned an impossible result")
             database.save_extraction(
                 raw,
                 EXTRACTION_VERSION,
@@ -214,7 +242,9 @@ def extract_releases(
 
     if failures:
         ref, error = failures[0]
-        raise ExtractError(f"{len(failures)} extraction(s) failed; first was {ref}: {error}") from error
+        raise ExtractError(
+            f"{len(failures)} extraction(s) failed; first was {ref}: {failure_diagnostic(error)}"
+        ) from error
     return extracted, skipped
 
 

@@ -34,6 +34,20 @@ CREATE TABLE IF NOT EXISTS extractions (
     FOREIGN KEY (source_ref, language) REFERENCES releases (source_ref, language)
 );
 
+CREATE TABLE IF NOT EXISTS extraction_failures (
+    source_ref TEXT NOT NULL,
+    language TEXT NOT NULL,
+    source_modification_time TEXT NOT NULL,
+    schema_version INTEGER NOT NULL,
+    model TEXT NOT NULL,
+    failed_at TEXT NOT NULL,
+    error_type TEXT NOT NULL,
+    error_message TEXT NOT NULL,
+    usage_json TEXT CHECK (usage_json IS NULL OR json_valid(usage_json)),
+    PRIMARY KEY (source_ref, language, source_modification_time, schema_version, model),
+    FOREIGN KEY (source_ref, language) REFERENCES releases (source_ref, language)
+);
+
 CREATE TABLE IF NOT EXISTS sync_state (
     language TEXT PRIMARY KEY,
     full_sync_completed INTEGER NOT NULL CHECK (full_sync_completed IN (0, 1))
@@ -176,6 +190,38 @@ class Database:
         with self.connection:
             self.connection.execute(
                 "INSERT OR REPLACE INTO extractions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", values
+            )
+            self.connection.execute(
+                """DELETE FROM extraction_failures
+                WHERE source_ref = ? AND language = ? AND source_modification_time = ?
+                  AND schema_version = ? AND model = ?""",
+                values[:5],
+            )
+
+    def save_extraction_failure(
+        self,
+        raw: dict[str, Any],
+        extraction_version: int,
+        model: str,
+        error: Exception,
+        message: str,
+        usage: dict[str, Any] | None,
+    ) -> None:
+        values = (
+            raw["newsRefNo"],
+            raw["lang"].upper(),
+            raw["modificationTime"],
+            extraction_version,
+            model,
+            now(),
+            type(error).__name__,
+            message,
+            encode(usage) if usage is not None else None,
+        )
+        with self.connection:
+            self.connection.execute(
+                "INSERT OR REPLACE INTO extraction_failures VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                values,
             )
 
     def full_sync_completed(self, language: str) -> bool:
