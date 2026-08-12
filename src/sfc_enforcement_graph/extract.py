@@ -15,7 +15,7 @@ from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
 from sfc_enforcement_graph.sync import SfcError
 from sfc_enforcement_graph.store import Database
 
-DEFAULT_MODEL = "gpt-5.6"
+DEFAULT_MODEL = "gpt-5.6-sol"
 DEFAULT_MAX_OUTPUT_TOKENS = 12_000
 REQUEST_TIMEOUT_SECONDS = 180
 INSTRUCTIONS = """You extract a high-recall, evidence-backed graph from an SFC enforcement release.
@@ -91,7 +91,7 @@ def extract_release(
     }
     result = agent.run_sync(
         "SOURCE RELEASE\n" + json.dumps(source, ensure_ascii=False),
-        model=model if ":" in model else f"openai-responses:{model}",
+        model=model if ":" in model else f"azure-responses:{model}",
         model_settings={
             "max_tokens": max_output_tokens,
             "openai_reasoning_effort": "medium",
@@ -204,7 +204,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Extract structured SFC data into SQLite.")
     parser.add_argument("--db", type=Path, default=Path("data/sfc.sqlite3"))
     parser.add_argument("--language", default="EN")
-    parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL", DEFAULT_MODEL))
+    parser.add_argument("--model", default=os.environ.get("AZURE_OPENAI_MODEL", DEFAULT_MODEL))
     parser.add_argument("--ref", action="append", default=[], help="Extract one release reference; repeatable.")
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--full", action="store_true", help="Extract every stale or missing release.")
@@ -228,8 +228,13 @@ def parse_args() -> argparse.Namespace:
         parser.error("--max-output-tokens must be positive")
     if args.workers < 1:
         parser.error("--workers must be positive")
-    if not os.environ.get("OPENAI_API_KEY"):
-        parser.error("OPENAI_API_KEY is required")
+    missing = [
+        name
+        for name in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY")
+        if not os.environ.get(name)
+    ]
+    if missing:
+        parser.error(f"{', '.join(missing)} required")
     return args
 
 

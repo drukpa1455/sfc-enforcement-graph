@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai'
+import { createOpenAI } from '@ai-sdk/openai'
 import { createAgentUIStreamResponse, isStepCount, safeValidateUIMessages, tool, ToolLoopAgent, type InferAgentUIMessage } from 'ai'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -24,6 +24,13 @@ import { CHAT_BODY_LIMIT, CHAT_MESSAGE_LIMIT, chatRequestBudget } from './guardr
 import { publicApi } from './public-api.js'
 
 const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
+const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT
+const azureKey = process.env.AZURE_OPENAI_API_KEY
+const azure = createOpenAI({
+  name: 'azure',
+  baseURL: azureEndpoint ?? 'https://azure.invalid/openai/v1',
+  apiKey: azureKey ?? 'missing',
+})
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
 Use search before discussing an entity unless its graph ID is already selected in the current UI context. Use inspect for relationships and evidence.
 When the user says this, these, here, or the current view, use the supplied UI context.
@@ -35,7 +42,7 @@ Distinguish allegations, findings, convictions, and sought actions. Cite release
 If the graph does not support an answer, say so. Keep answers concise.`
 
 export const agent = new ToolLoopAgent({
-  model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.6'),
+  model: azure(process.env.AZURE_OPENAI_MODEL ?? 'gpt-5.6-sol'),
   maxOutputTokens: 1_200,
   stopWhen: isStepCount(6),
   instructions,
@@ -133,6 +140,7 @@ app.post('/api/chat', bodyLimit({
     tools: agent.tools,
   })
   if (!messages.success) return context.json({ error: 'invalid chat request' }, 400)
+  if (!azureEndpoint || !azureKey) return context.json({ error: 'chat is not configured' }, 503)
   const admission = requests.take()
   if (!admission.allowed) {
     context.header('Retry-After', String(admission.retryAfter))
