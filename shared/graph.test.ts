@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
 import { analyzeGraph } from './analytics.js'
-import { communityGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { communityGraph, componentGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
@@ -104,14 +104,22 @@ test('community exposes a structural cluster without inventing edges', () => {
   assert.ok(result.links.every((link) => result.nodeIds.includes(link.source) && result.nodeIds.includes(link.target)))
 })
 
+test('component exposes a bounded connected subgraph', () => {
+  const result = componentGraph(graph, broker)
+  assert.notEqual(result.component, null)
+  assert.ok(result.nodeIds.includes(broker))
+  assert.ok(result.nodes.every((node) => node.metrics.component === result.component))
+  assert.equal(result.nodes.length, Math.min(result.nodes[0].metrics.componentSize, 80))
+})
+
 test('analytics excludes releases and authority hubs', () => {
   const authority = graph.nodes.find((node) => node.id === regulator)
   const release = graph.nodes.find((node) => node.kind === 'release')
   assert.ok(authority)
   assert.ok(release)
   assert.deepEqual(
-    [authority, release].map((node) => [node.metrics.degree, node.metrics.pagerank, node.metrics.community]),
-    [[0, 0, null], [0, 0, null]],
+    [authority, release].map((node) => [node.metrics.degree, node.metrics.pagerank, node.metrics.component, node.metrics.community]),
+    [[0, 0, null, null], [0, 0, null, null]],
   )
 })
 

@@ -208,6 +208,7 @@ function metricFacts(node: GraphNode): Array<[string, string]> {
     ['betweenness', node.metrics.betweenness],
   ]
   const facts = metrics.filter(([, value]) => value > 0).map(([name, value]) => [name, String(value)] as [string, string])
+  if (node.metrics.component !== null) facts.push(['component', String(node.metrics.component)])
   if (node.metrics.community !== null) facts.push(['community', String(node.metrics.community)])
   return facts
 }
