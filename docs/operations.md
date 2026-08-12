@@ -37,8 +37,9 @@ record, and a failed export does not make the browser authoritative.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `OPENAI_API_KEY` | Extraction and research-agent model calls | required for those calls |
-| `OPENAI_MODEL` | Extraction and chat model | `gpt-5.6` |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI v1 endpoint | required for model calls |
+| `AZURE_OPENAI_API_KEY` | Extraction and research-agent model calls | required for model calls |
+| `AZURE_OPENAI_MODEL` | Extraction and chat model | `gpt-5.6-sol` |
 | `CHAT_REQUESTS_PER_MINUTE` | Per-process chat admission budget | `12` |
 | `PORT` | Production Hono port | `8787` |
 
@@ -56,8 +57,8 @@ builds Vite. Hono serves the application, `/docs/`, and `/api/v1`; `/docs`
 redirects to the canonical trailing-slash path.
 
 Railway reads `railway.json`, runs the same build, starts Hono, and checks
-`/api/health`. Configure `OPENAI_API_KEY`, optional model and chat budget, and a
-hard provider spend limit before enabling public chat.
+`/api/health`. Configure the Azure endpoint and key, optional model and chat
+budget, and a hard provider spend limit before enabling public chat.
 
 ## Verify
 

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -90,11 +91,12 @@ def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
         saved = database.connection.execute("SELECT * FROM extractions").fetchone()
 
     assert (extracted, skipped) == (1, 0)
-    assert call["model"] == "openai-responses:test-model"
+    assert call["model"] == "azure-responses:test-model"
     assert call["model_settings"]["openai_reasoning_effort"] == "medium"
     assert call["model_settings"]["timeout"] == 180
     assert saved["source_ref"] == "sample"
-    assert saved["usage_json"] == '{"input_tokens":10,"cache_write_tokens":0,"cache_read_tokens":0,"output_tokens":20,"input_audio_tokens":0,"cache_audio_read_tokens":0,"output_audio_tokens":0,"details":{},"requests":0,"tool_calls":0}'
+    usage = json.loads(saved["usage_json"])
+    assert (usage["input_tokens"], usage["output_tokens"]) == (10, 20)
 
 
 def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:

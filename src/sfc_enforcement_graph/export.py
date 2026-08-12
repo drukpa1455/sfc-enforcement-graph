@@ -23,7 +23,7 @@ from sfc_enforcement_graph.models import (
 from sfc_enforcement_graph.store import Database
 
 SOURCE_URL = "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo="
-DEFAULT_MODEL = "gpt-5.6"
+DEFAULT_MODEL = "gpt-5.6-sol"
 MERGED_ENTITY_KINDS = {"person", "organization", "fund", "instrument"}
 
 ACTION_FAMILIES = {
@@ -370,7 +370,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Project current SQLite extractions into the application graph.")
     parser.add_argument("--db", type=Path, default=Path("data/sfc.sqlite3"))
     parser.add_argument("--output", type=Path, default=Path("data/graph.json"))
-    parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL", DEFAULT_MODEL))
+    parser.add_argument("--model", default=os.environ.get("AZURE_OPENAI_MODEL", DEFAULT_MODEL))
     parser.add_argument("--language", default="EN")
     args = parser.parse_args()
     with Database(args.db) as database:

@@ -30,12 +30,13 @@ Graph proximity and centrality are structural signals, not evidence of misconduc
 ## Quickstart
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js 22+, and an
-OpenAI API key for extraction and chat.
+Azure OpenAI v1 endpoint and key for extraction and chat.
 
 ```bash
 uv sync --group dev
 npm ci
-export OPENAI_API_KEY=...
+export AZURE_OPENAI_ENDPOINT=https://RESOURCE.services.ai.azure.com/openai/v1
+export AZURE_OPENAI_API_KEY=...
 npm run dev
 ```
 
@@ -100,8 +101,9 @@ npm start
 ```
 
 Railway reads `railway.json`, builds the Vite application and MkDocs site,
-starts Hono, and checks `/api/health`. Set `OPENAI_API_KEY`, optionally
-`OPENAI_MODEL` and `CHAT_REQUESTS_PER_MINUTE`, and a hard provider spend limit.
+starts Hono, and checks `/api/health`. Set `AZURE_OPENAI_ENDPOINT` and
+`AZURE_OPENAI_API_KEY`, optionally `AZURE_OPENAI_MODEL` and
+`CHAT_REQUESTS_PER_MINUTE`, and a hard provider spend limit.
 
 ## Data and scope
 

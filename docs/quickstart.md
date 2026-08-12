@@ -5,7 +5,7 @@
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
 - Node.js 22+
-- an OpenAI API key for extraction and chat
+- an Azure OpenAI v1 endpoint and key for extraction and chat
 
 ```bash
 git clone https://github.com/drukpa1455/sfc-enforcement-graph.git
@@ -17,7 +17,8 @@ npm ci
 Set the key without committing it:
 
 ```bash
-export OPENAI_API_KEY=...
+export AZURE_OPENAI_ENDPOINT=https://RESOURCE.services.ai.azure.com/openai/v1
+export AZURE_OPENAI_API_KEY=...
 ```
 
 ## Run the included graph
