@@ -26,7 +26,7 @@ export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedLink, setSelectedLink] = useState<GraphLink>()
-  const [scope, setScope] = useState<Scope>({ mode: 'overview' })
+  const [scope, setScope] = useState<Scope>({ mode: 'all' })
   const [nodeFamilies, setNodeFamilies] = useState<Set<NodeFamily>>(() => new Set(NODE_FAMILIES))
   const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
   const [layout, setLayout] = useState<Layout>('split')
