@@ -24,10 +24,10 @@ SFC releases → SQLite → typed extraction → graph.json
   actions; the agent still queries and focuses the complete graph.
 
 SQLite is the source of truth. `data/graph.json` is a replaceable projection
-produced by `qf-sfc-export`; the browser never owns canonical graph data.
+produced by `sfc-graph-export`; the browser never owns canonical graph data.
 
 ```text
-src/qf_sfc/  sync, extract, store, export
+src/sfc_enforcement_graph/  sync, extract, store, export
 shared/     graph contract and pure queries
 server/     HTTP and research agent
 web/        React interface
@@ -47,18 +47,18 @@ export OPENAI_API_KEY=...
 Build the dataset:
 
 ```sh
-uv run qf-sfc-sync --full
-uv run qf-sfc-extract --full --workers 4
-uv run qf-sfc-export
+uv run sfc-graph-sync --full
+uv run sfc-graph-extract --full --workers 4
+uv run sfc-graph-export
 ```
 
 Subsequent refreshes use the same straight-line workflow; sync reconciles all
 release metadata but downloads and extracts only changed work:
 
 ```sh
-uv run qf-sfc-sync
-uv run qf-sfc-extract --full --workers 4
-uv run qf-sfc-export
+uv run sfc-graph-sync
+uv run sfc-graph-extract --full --workers 4
+uv run sfc-graph-export
 ```
 
 Use `--limit N` on sync or extraction for bounded samples. Extraction defaults

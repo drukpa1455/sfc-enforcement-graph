@@ -10,8 +10,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from qf_sfc.models import SCHEMA_VERSION, ReleaseExtraction
-from qf_sfc.store import Database
+from sfc_enforcement_graph.models import SCHEMA_VERSION, ReleaseExtraction
+from sfc_enforcement_graph.store import Database
 
 SOURCE_URL = "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo="
 DEFAULT_MODEL = "gpt-5.6"

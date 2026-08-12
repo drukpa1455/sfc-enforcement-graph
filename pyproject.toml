@@ -1,13 +1,13 @@
 [project]
-name = "qf-sfc"
+name = "sfc-enforcement-graph"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = ["pydantic-ai-slim[openai]>=1,<2", "pydantic>=2.12,<3"]
 
 [project.scripts]
-qf-sfc-sync = "qf_sfc.sync:main"
-qf-sfc-extract = "qf_sfc.extract:main"
-qf-sfc-export = "qf_sfc.export:main"
+sfc-graph-sync = "sfc_enforcement_graph.sync:main"
+sfc-graph-extract = "sfc_enforcement_graph.extract:main"
+sfc-graph-export = "sfc_enforcement_graph.export:main"
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -10,7 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from qf_sfc.store import Database
+from sfc_enforcement_graph.store import Database
 
 BASE_URL = "https://apps.sfc.hk/edistributionWeb/api/news"
 PAGE_SIZE = 100

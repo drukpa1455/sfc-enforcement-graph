@@ -4,15 +4,15 @@ from types import SimpleNamespace
 import pytest
 from pydantic_ai.usage import RunUsage
 
-from qf_sfc.extract import (
+from sfc_enforcement_graph.extract import (
     ExtractError,
     extract_releases,
     extract_text,
     repair_evidence_case,
     validate_evidence,
 )
-from qf_sfc.models import ReleaseExtraction
-from qf_sfc.store import Database
+from sfc_enforcement_graph.models import ReleaseExtraction
+from sfc_enforcement_graph.store import Database
 
 
 def extraction(quote: str = "Example Limited") -> ReleaseExtraction:
