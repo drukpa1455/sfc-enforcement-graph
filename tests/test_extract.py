@@ -118,3 +118,69 @@ def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:
         writer.connection.execute("PRAGMA busy_timeout = 1")
 
         writer.save_release(third)
+
+
+def test_parallel_extraction_has_one_database_writer(tmp_path: Path) -> None:
+    path = tmp_path / "test.sqlite3"
+    result = SimpleNamespace(
+        output=extraction(),
+        usage=RunUsage(),
+        run_id="run_1",
+    )
+    agent = SimpleNamespace(run_sync=lambda *args, **kwargs: result)
+
+    with Database(path) as database:
+        for ref in ("first", "second"):
+            database.save_release(
+                {
+                    "newsRefNo": ref,
+                    "lang": "EN",
+                    "title": "Sample",
+                    "html": "<p>Example Limited</p>",
+                    "issueDate": "2026-01-01",
+                    "modificationTime": "2026-01-01",
+                }
+            )
+        extracted, skipped = extract_releases(
+            agent, database, "EN", "test-model", None, set(), False, 1_000, workers=2
+        )
+
+        assert (extracted, skipped) == (2, 0)
+        assert database.connection.execute("SELECT count(*) FROM extractions").fetchone()[0] == 2
+
+
+def test_parallel_extraction_saves_successes_before_reporting_failures(tmp_path: Path) -> None:
+    path = tmp_path / "test.sqlite3"
+
+    def run_sync(prompt: str, **kwargs):
+        if '"reference": "bad"' in prompt:
+            raise RuntimeError("bad release")
+        return SimpleNamespace(output=extraction(), usage=RunUsage(), run_id="run_1")
+
+    with Database(path) as database:
+        for ref in ("good", "bad"):
+            database.save_release(
+                {
+                    "newsRefNo": ref,
+                    "lang": "EN",
+                    "title": "Sample",
+                    "html": "<p>Example Limited</p>",
+                    "issueDate": "2026-01-01",
+                    "modificationTime": "2026-01-01",
+                }
+            )
+
+        with pytest.raises(ExtractError, match="1 extraction.*bad"):
+            extract_releases(
+                SimpleNamespace(run_sync=run_sync),
+                database,
+                "EN",
+                "test-model",
+                None,
+                set(),
+                False,
+                1_000,
+                workers=2,
+            )
+
+        assert database.connection.execute("SELECT source_ref FROM extractions").fetchone()[0] == "good"

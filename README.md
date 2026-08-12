@@ -42,7 +42,7 @@ Build the dataset:
 
 ```sh
 uv run qf-sfc-sync --full
-uv run qf-sfc-extract --full
+uv run qf-sfc-extract --full --workers 4
 uv run qf-sfc-export
 ```
 
@@ -51,13 +51,14 @@ skip unchanged work by default:
 
 ```sh
 uv run qf-sfc-sync
-uv run qf-sfc-extract --full
+uv run qf-sfc-extract --full --workers 4
 uv run qf-sfc-export
 ```
 
 Use `--limit N` on sync or extraction for bounded samples. Extraction defaults
 to one API call; `--full` processes every stale or missing release, while
 `--full --force` intentionally replaces every current output.
+`--workers N` bounds concurrent extraction calls; SQLite writes remain serialized.
 
 Start the application:
 

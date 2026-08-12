@@ -72,10 +72,7 @@ export default function App() {
     <main className="workspace">
       <section className="canvas">
         <header>
-          <div>
-            <p className="eyebrow">SFC enforcement</p>
-            <h1>Connected conduct</h1>
-          </div>
+          <h1><span>SFC enforcement</span> Connected conduct</h1>
           <div className="meta">
             <p>{focusIds ? `${visibleGraph.nodes.length} of ${graph.nodes.length}` : graph.nodes.length} nodes · {visibleGraph.links.length} links</p>
             {focusIds && <button className="text-button" onClick={showAll}>Show all</button>}
