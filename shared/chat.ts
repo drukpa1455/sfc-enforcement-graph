@@ -1,9 +1,11 @@
 import type { GraphView } from './graph.js'
 
-export function compactChatHistory<Message extends { parts: Array<{ type: string }> }>(messages: Message[]) {
+export function compactChatHistory<Message extends { parts: Array<{ type: string; text?: string }> }>(messages: Message[]) {
   return messages.flatMap((message, index) => {
     if (index === messages.length - 1) return [message]
-    const parts = message.parts.filter((part) => part.type === 'text')
+    const parts = message.parts.flatMap((part) =>
+      part.type === 'text' ? [{ type: 'text', text: part.text ?? '' }] : [],
+    )
     return parts.length ? [{ ...message, parts } as Message] : []
   })
 }
