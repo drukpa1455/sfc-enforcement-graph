@@ -105,7 +105,7 @@ class Database:
         rows = self.connection.execute(
             "SELECT raw_json FROM releases WHERE language = ? ORDER BY issue_date DESC, source_ref DESC",
             (language.upper(),),
-        )
+        ).fetchall()
         for row in rows:
             raw = json.loads(row["raw_json"])
             if not refs or raw["newsRefNo"] in refs:

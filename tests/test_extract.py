@@ -83,3 +83,26 @@ def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
     assert call["model_settings"]["timeout"] == 180
     assert saved["source_ref"] == "sample"
     assert saved["usage_json"] == '{"input_tokens":10,"cache_write_tokens":0,"cache_read_tokens":0,"output_tokens":20,"input_audio_tokens":0,"cache_audio_read_tokens":0,"output_audio_tokens":0,"details":{},"requests":0,"tool_calls":0}'
+
+
+def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:
+    path = tmp_path / "test.sqlite3"
+    first = {
+        "newsRefNo": "first",
+        "lang": "EN",
+        "title": "First",
+        "html": "<p>First</p>",
+        "issueDate": "2026-01-02",
+        "modificationTime": "2026-01-02",
+    }
+    second = {**first, "newsRefNo": "second", "title": "Second", "issueDate": "2026-01-01"}
+    third = {**first, "newsRefNo": "third", "title": "Third", "issueDate": "2026-01-03"}
+
+    with Database(path) as reader, Database(path) as writer:
+        reader.save_release(first)
+        reader.save_release(second)
+        releases = reader.releases("EN", set())
+        next(releases)
+        writer.connection.execute("PRAGMA busy_timeout = 1")
+
+        writer.save_release(third)
