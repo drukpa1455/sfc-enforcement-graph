@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "release:26PR104", "label": "26PR104 · Wong Tim Hi suspended", "kind": "release", "summary": "The SFC suspended Wong Tim Hi for nine months following regulatory breaches.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:wong-tim-hi", "label": "Mr Wong Tim Hi", "kind": "person", "summary": "Former Yuanta licensed representative whose licence was suspended for nine months.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:securities-and-futures-commission", "label": "Securities and Futures Commission", "kind": "organization", "summary": "Hong Kong regulator that investigated and suspended Wong.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:yuanta-securities-hong-kong", "label": "Yuanta Securities (Hong Kong) Company Limited", "kind": "organization", "summary": "Licensed corporation to which Wong was accredited from 2013 to 2026.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:ching-lee-holdings", "label": "Ching Lee Holdings Limited", "kind": "organization", "summary": "Issuer whose shares were involved in related false-trading proceedings.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:two-third-parties", "label": "Two third parties", "kind": "group", "summary": "Unnamed parties allowed to operate or act for four client accounts.", "releaseRefs": ["26PR104"] },
+    { "id": "entity:relevant-clients", "label": "Relevant clients", "kind": "group", "summary": "Clients whose account information and instructions were at issue.", "releaseRefs": ["26PR104"] },
+    { "id": "instrument:ching-lee-shares", "label": "Shares of Ching Lee", "kind": "instrument", "summary": "Shares involved in the false-trading proceedings described by the release.", "releaseRefs": ["26PR104"] }
+  ],
+  "links": [
+    { "source": "release:26PR104", "target": "entity:wong-tim-hi", "kind": "primary_subject", "evidence": "The Securities and Futures Commission (SFC) has suspended the licence of Mr Wong Tim Hi", "releaseRef": "26PR104" },
+    { "source": "entity:securities-and-futures-commission", "target": "entity:wong-tim-hi", "kind": "suspended_licence_of", "evidence": "suspended the licence of Mr Wong Tim Hi ... for nine months", "releaseRef": "26PR104" },
+    { "source": "entity:wong-tim-hi", "target": "entity:yuanta-securities-hong-kong", "kind": "accredited_to", "evidence": "was accredited to Yuanta between 10 April 2013 and 31 March 2026", "releaseRef": "26PR104" },
+    { "source": "entity:wong-tim-hi", "target": "entity:two-third-parties", "kind": "allowed_account_operation_by", "evidence": "Wong allowed two third parties to be highly involved in operating, or acting on behalf of, four client accounts", "releaseRef": "26PR104" },
+    { "source": "entity:two-third-parties", "target": "entity:relevant-clients", "kind": "operated_accounts_of", "evidence": "without obtaining written authorisation from the relevant clients", "releaseRef": "26PR104" },
+    { "source": "entity:ching-lee-holdings", "target": "instrument:ching-lee-shares", "kind": "issuer_of", "evidence": "shares of Ching Lee Holdings Limited (Ching Lee)", "releaseRef": "26PR104" },
+    { "source": "release:26PR104", "target": "entity:ching-lee-holdings", "kind": "mentions", "evidence": "false trading in the shares of Ching Lee", "releaseRef": "26PR104" }
+  ],
+  "releases": [
+    { "ref": "26PR104", "title": "SFC suspends Wong Tim Hi for nine months", "issueDate": "2026-07-06T04:30:00", "url": "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo=26PR104" }
+  ]
+}
