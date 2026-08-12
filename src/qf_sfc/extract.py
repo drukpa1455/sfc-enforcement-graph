@@ -1,0 +1,209 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+from dataclasses import asdict
+from html.parser import HTMLParser
+from pathlib import Path
+from typing import Any
+
+from pydantic_ai import Agent
+from qf_sfc.models import ReleaseExtraction
+from qf_sfc.pull import SfcError
+from qf_sfc.store import Database
+
+DEFAULT_MODEL = "gpt-5.6"
+DEFAULT_MAX_OUTPUT_TOKENS = 12_000
+REQUEST_TIMEOUT_SECONDS = 180
+SCHEMA_VERSION = 8
+
+INSTRUCTIONS = """You extract a high-recall, evidence-backed graph from an SFC enforcement release.
+
+Rules:
+- Use only the supplied release. Do not add external knowledge or infer unstated facts.
+- Extract every named or distinctly described person, organization, fund, and financial instrument as a source-relative mention. Canonical entity resolution happens later.
+- Extract each named entity separately. Use one grouped mention only when the release withholds individual names.
+- Include regulators, courts, affected parties, employers, counterparties, issuers, and spokespeople as secondary mentions.
+- Primary is narrow and document-relative: use it for direct subjects of the new central risk or action announced by this release, plus a named company central to that event. A person sanctioned in an earlier proceeding remains secondary when that outcome appears only as history or in notes. Intermediaries and legally bound notice recipients remain secondary when the release says they are not investigation subjects. Beneficiaries, affected clients or shareholders, regulators, courts, incidental issuers, and other background parties are secondary.
+- Regulators, law-enforcement bodies, courts, and quoted spokespeople are secondary unless they are themselves subject to the action. Acting in the headline or opening sentence does not make them primary.
+- Assign mention, matter, relationship, risk, and action IDs sequentially within their type.
+- Use involvement only for subject, affected, authority, intermediary, or related. Put exact jobs and functions in attributes or relationships.
+- Group risks and actions under a matter only when the release identifies an investigation, disciplinary proceeding, court case, tribunal proceeding, or appeal. Do not create a matter merely because an action exists. An action such as a restriction notice belongs to the investigation or proceeding it supports when the source connects them; otherwise its matter_id is null. Capture case numbers and shared legal provisions on the matter instead of repeating them on every assertion.
+- Choose the stable risk family separately from the specific category.
+- Preserve whether conduct is reported, suspected, alleged, considered, found, convicted, or ordered.
+- Preserve explicit negation and exculpatory statements.
+- Use aliases only for alternative names or abbreviations explicitly introduced with wording such as 'also known as', 'formerly known as', or a parenthetical abbreviation. A surname-only later mention is not an alias.
+- Do not emit duplicate relationships that express the same underlying role or affiliation.
+- For actions, distinguish the actor, the legally bound target, and other affected entities. Receiving a notice does not imply misconduct. Preserve procedural changes such as commencement, adjournment, withdrawal, revocation, and completion.
+- Emit one action for one source-described action. Group targets that share the same type, status, amount, duration, and evidentiary basis; separate actions when those facts differ. Distinct claims or proceedings under different legal provisions may remain separate.
+- Emit an action only when the release explicitly says it was issued, imposed, sought, granted, agreed, ordered, or remains pending. Do not turn generic words such as 'disciplinary action' or 'sanction' into a specific reprimand, fine, or other action.
+- Never infer an authority or action actor. Leave its ID list empty when passive wording does not identify one.
+- Capture uncommon facts as attributes rather than dropping them.
+- Preserve monetary source text and also normalize currency, amount, and qualifier only when unambiguous. Preserve period text and normalize complete dates only when explicitly stated.
+- Every evidence quote must be an exact contiguous substring of the supplied title or source_text. Never paraphrase evidence.
+"""
+
+extractor = Agent(output_type=ReleaseExtraction, instructions=INSTRUCTIONS)
+
+
+class ExtractError(RuntimeError):
+    pass
+
+
+class TextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"br", "li", "p"}:
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+    def text(self) -> str:
+        return re.sub(r"\s+", " ", "".join(self.parts)).strip()
+
+
+def extract_text(html: str) -> str:
+    parser = TextExtractor()
+    parser.feed(html)
+    parser.close()
+    return parser.text()
+
+
+def extract_release(
+    agent: Agent[None, ReleaseExtraction],
+    raw: dict[str, Any],
+    model: str,
+    max_output_tokens: int,
+) -> tuple[ReleaseExtraction, Any]:
+    ref = require_string(raw, "newsRefNo")
+    title = require_string(raw, "title").strip()
+    text = extract_text(require_string(raw, "html"))
+    source = {
+        "reference": ref,
+        "title": title,
+        "issue_date": require_string(raw, "issueDate"),
+        "source_text": text,
+    }
+    result = agent.run_sync(
+        "SOURCE RELEASE\n" + json.dumps(source, ensure_ascii=False),
+        model=model if ":" in model else f"openai-responses:{model}",
+        model_settings={
+            "max_tokens": max_output_tokens,
+            "openai_reasoning_effort": "medium",
+            "timeout": REQUEST_TIMEOUT_SECONDS,
+        },
+    )
+    extraction = result.output
+    validate_evidence(extraction, f"{title}\n{text}")
+    return extraction, result
+
+
+def validate_evidence(extraction: ReleaseExtraction, source_text: str) -> None:
+    missing = sorted({quote for quote in evidence_quotes(extraction.model_dump()) if quote not in source_text})
+    if missing:
+        preview = missing[0][:120]
+        raise ExtractError(f"evidence quote is not present in source text: {preview!r}")
+
+
+def evidence_quotes(value: Any):
+    if isinstance(value, dict):
+        if set(value) == {"quote"} and isinstance(value["quote"], str):
+            yield value["quote"]
+        for child in value.values():
+            yield from evidence_quotes(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from evidence_quotes(child)
+
+
+def extract_releases(
+    agent: Agent[None, ReleaseExtraction],
+    database: Database,
+    language: str,
+    model: str,
+    limit: int | None,
+    refs: set[str],
+    force: bool,
+    max_output_tokens: int,
+) -> tuple[int, int]:
+    extracted = skipped = 0
+    for raw in database.releases(language, refs):
+        ref = require_string(raw, "newsRefNo")
+        if not force and database.extraction_is_current(raw, SCHEMA_VERSION, model):
+            skipped += 1
+            continue
+        if limit is not None and extracted >= limit:
+            break
+
+        extraction, result = extract_release(agent, raw, model, max_output_tokens)
+        database.save_extraction(
+            raw,
+            SCHEMA_VERSION,
+            model,
+            extraction.model_dump(mode="json"),
+            result.run_id,
+            asdict(result.usage),
+        )
+        extracted += 1
+    return extracted, skipped
+
+
+def require_string(data: dict[str, Any], field: str) -> str:
+    value = data.get(field)
+    if not isinstance(value, str) or not value:
+        raise ExtractError(f"source release has invalid {field}")
+    return value
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Extract structured SFC data into SQLite.")
+    parser.add_argument("--db", type=Path, default=Path("data/sfc.sqlite3"))
+    parser.add_argument("--language", default="EN")
+    parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL", DEFAULT_MODEL))
+    parser.add_argument("--ref", action="append", default=[], help="Extract one release reference; repeatable.")
+    parser.add_argument("--limit", type=int, default=1, help="Maximum API calls (default: 1).")
+    parser.add_argument("--all", action="store_true", help="Extract every stale or missing release.")
+    parser.add_argument("--force", action="store_true", help="Re-extract current outputs.")
+    parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=DEFAULT_MAX_OUTPUT_TOKENS,
+        help=f"Per-call output cap (default: {DEFAULT_MAX_OUTPUT_TOKENS}).",
+    )
+    args = parser.parse_args()
+    if args.limit < 1:
+        parser.error("--limit must be positive")
+    if args.max_output_tokens < 1:
+        parser.error("--max-output-tokens must be positive")
+    if not os.environ.get("OPENAI_API_KEY"):
+        parser.error("OPENAI_API_KEY is required")
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    try:
+        with Database(args.db) as database:
+            extracted, skipped = extract_releases(
+                extractor,
+                database,
+                language=args.language,
+                model=args.model,
+                limit=None if args.all else args.limit,
+                refs=set(args.ref),
+                force=args.force,
+                max_output_tokens=args.max_output_tokens,
+            )
+    except (ExtractError, SfcError, json.JSONDecodeError) as error:
+        raise SystemExit(f"error: {error}") from None
+    print(f"extracted={extracted} skipped={skipped} model={args.model}")
+
+
+if __name__ == "__main__":
+    main()

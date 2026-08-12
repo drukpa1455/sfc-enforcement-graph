@@ -3,10 +3,23 @@
 An evidence-backed graph of SFC enforcement releases with a read-only research agent.
 
 ```text
-SFC → Python extraction → data/graph.json → Vite graph + Hono agent
+SFC API → SQLite → typed extraction → canonical graph → Vite + Hono agent
 ```
 
-## Run
+SQLite owns raw releases, versioned extraction JSON, sync state, and deterministic
+release links. Extraction owns source-relative mentions and assertions. Canonical
+entities and matters are resolved later and exported to replaceable `data/graph.json`.
+
+## Data pipeline
+
+```sh
+uv sync --group dev
+uv run qf-sfc-pull --limit 50
+uv run qf-sfc-extract --limit 1
+uv run pytest -q
+```
+
+## Application
 
 ```sh
 npm install
@@ -22,6 +35,5 @@ npm run build
 npm start
 ```
 
-`data/graph.json` is derived and replaceable. Its node IDs are the shared identity between the renderer and agent tools. The backend exporter owns generation; the TypeScript schema rejects duplicate IDs and unknown link endpoints.
-
-The agent has four read-only tools: `search` finds nodes, `inspect` returns one immediate neighborhood, `expand` adds a relationship hop, and `trace` finds the shortest evidence-backed path between two nodes. Each tool result carries a focused graph view; **Show all** restores the complete graph.
+The research agent can search, inspect, expand, and trace the shortest
+evidence-backed path. Each tool result carries a focused graph view.
