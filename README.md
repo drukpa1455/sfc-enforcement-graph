@@ -20,6 +20,13 @@ SFC releases → SQLite → typed extraction → graph.json
 SQLite is the source of truth. `data/graph.json` is a replaceable projection
 produced by `qf-sfc-export`; the browser never owns canonical graph data.
 
+```text
+src/qf_sfc/  sync, extract, store, export
+shared/     graph contract and pure queries
+server/     HTTP and research agent
+web/        React interface
+```
+
 ## Run locally
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js 22+, and an
