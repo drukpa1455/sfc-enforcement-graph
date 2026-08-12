@@ -28,6 +28,13 @@ Each model call receives one release and may use only that release. The typed
 schema captures mentions, matters, risks, actions, relationships, attributes,
 money, periods, geography, statuses, and evidence.
 
+Risk and action types are controlled vocabularies. Each type owns one stable
+family, derived by code rather than extracted separately. A concise
+source-grounded label preserves detail beyond the controlled type. Relationship
+predicates and attributes retain source-specific detail; their controlled kind
+or owning node type is the stable query dimension. Geography records only an
+actual source-stated relationship, never a place that merely appears in a name.
+
 Every evidence quote must be an exact contiguous substring of the title or
 release text. Invalid evidence rejects the extraction. SQLite records the
 extraction schema version, model, run identifier, and usage so stale outputs can
@@ -44,6 +51,12 @@ facts, and evidence. Ordering and identifiers are deterministic. Rebuilding
 `data/graph.json` from the same SQLite state produces the same projection.
 Graphology derives metrics when the application starts; analytics are not
 persisted in the projection and can be rebuilt without extraction.
+
+Risk families are market misconduct, fraud and dishonesty, financial crime,
+licensing and fitness, client protection, systems and controls, governance and
+oversight, disclosure and reporting, cybersecurity, legal process, and other.
+Action families are investigative, proceeding, procedural, decision,
+protective, remedial, sanction, administrative, and other.
 
 ## Graph semantics
 

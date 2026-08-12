@@ -23,6 +23,7 @@ INSTRUCTIONS = """You extract a high-recall, evidence-backed graph from an SFC e
 Rules:
 - Use only the supplied release. Do not add external knowledge or infer unstated facts.
 - Extract every named or distinctly described person, organization, fund, and financial instrument as a source-relative mention. Canonical entity resolution happens later.
+- Treat a company or other issuer as an organization. Treat its shares, bonds, accounts, and other securities as financial instruments; a stock code does not turn the issuer into an instrument.
 - Extract each named entity separately. Use one grouped mention only when the release withholds individual names.
 - Include regulators, courts, affected parties, employers, counterparties, issuers, and spokespeople as secondary mentions.
 - Primary is narrow and document-relative: use it for direct subjects of the new central risk or action announced by this release, plus a named company central to that event. A person sanctioned in an earlier proceeding remains secondary when that outcome appears only as history or in notes. Intermediaries and legally bound notice recipients remain secondary when the release says they are not investigation subjects. Beneficiaries, affected clients or shareholders, regulators, courts, incidental issuers, and other background parties are secondary.
@@ -30,8 +31,10 @@ Rules:
 - Assign mention, matter, relationship, risk, and action IDs sequentially within their type.
 - Use involvement only for subject, affected, authority, intermediary, or related. Put exact jobs and functions in attributes or relationships.
 - Group risks and actions under a matter only when the release identifies an investigation, disciplinary proceeding, court case, tribunal proceeding, or appeal. Do not create a matter merely because an action exists. An action such as a restriction notice belongs to the investigation or proceeding it supports when the source connects them; otherwise its matter_id is null. Capture case numbers and shared legal provisions on the matter instead of repeating them on every assertion.
-- Choose the stable risk family separately from the specific category.
-- Preserve whether conduct is reported, suspected, alleged, considered, found, convicted, or ordered.
+- Choose exactly one controlled risk type and add a concise source-grounded label for the specific conduct or impact. The risk family is derived later.
+- Choose exactly one controlled action type and add a concise source-grounded label for the specific event. The action family is derived later.
+- Normalize source wording to the controlled type: convictions, pleas, and findings are decisions; arrests and searches are investigative; charges and prosecutions are proceedings; asset freezes and restriction notices are protective; compensation and restoration are remedial; fines and licence sanctions are sanctions; and listing or governance changes are administrative. Use other only when no controlled type fits.
+- Preserve whether conduct is reported, suspected, alleged, considered, admitted, found, convicted, acquitted, dismissed, or ordered.
 - Preserve explicit negation and exculpatory statements.
 - Use aliases only for alternative names or abbreviations explicitly introduced with wording such as 'also known as', 'formerly known as', or a parenthetical abbreviation. A surname-only later mention is not an alias.
 - Do not emit duplicate relationships that express the same underlying role or affiliation.
@@ -39,7 +42,8 @@ Rules:
 - Emit one action for one source-described action. Group targets that share the same type, status, amount, duration, and evidentiary basis; separate actions when those facts differ. Distinct claims or proceedings under different legal provisions may remain separate.
 - Emit an action only when the release explicitly says it was issued, imposed, sought, granted, agreed, ordered, or remains pending. Do not turn generic words such as 'disciplinary action' or 'sanction' into a specific reprimand, fine, or other action.
 - Never infer an authority or action actor. Leave its ID list empty when passive wording does not identify one.
-- Capture uncommon facts as attributes rather than dropping them.
+- Capture uncommon facts as source-specific attributes rather than dropping them; attributes are not a canonical taxonomy.
+- Add geography only for an actual source-stated relationship such as residence, incorporation, operations, listing, regulation, proceedings, conduct, assets, or restrictions. A place inside an entity name is not geography by itself.
 - Preserve monetary source text and also normalize currency, amount, and qualifier only when unambiguous. Preserve period text and normalize complete dates only when explicitly stated.
 - Every evidence quote must be an exact contiguous substring of the supplied title or source_text. Never paraphrase evidence.
 """
