@@ -5,6 +5,7 @@ import { focusGraph, overviewGraph, type GraphData, type GraphLink, type GraphVi
 import './App.css'
 
 export type Theme = 'light' | 'dark'
+type Layout = 'graph' | 'split' | 'agent'
 
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
@@ -12,6 +13,7 @@ export default function App() {
   const [selectedLink, setSelectedLink] = useState<GraphLink>()
   const [focusIds, setFocusIds] = useState<string[]>()
   const [showFullGraph, setShowFullGraph] = useState(false)
+  const [layout, setLayout] = useState<Layout>('split')
   const [viewReset, setViewReset] = useState(0)
   const [viewVersion, setViewVersion] = useState(0)
   const [error, setError] = useState<string>()
@@ -78,7 +80,7 @@ export default function App() {
   if (!graph || !visibleGraph) return <main className="centered">Loading graph…</main>
 
   return (
-    <main className="workspace">
+    <main className="workspace" data-layout={layout}>
       <section className="canvas">
         <header>
           <h1><span>SFC enforcement</span> Connected conduct</h1>
@@ -91,6 +93,7 @@ export default function App() {
             {showFullGraph && !focusIds
               ? <button className="text-button" onClick={showOverview}>Overview</button>
               : <button className="text-button" onClick={showAll}>Show all</button>}
+            <LayoutSwitch layout={layout} onChange={setLayout} />
             <button
               aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}
               className="icon-button"
@@ -116,11 +119,41 @@ export default function App() {
         selectedLink={selectedLink}
         view={focusIds ? { mode: 'focus', nodeIds: visibleGraph.nodes.slice(0, 80).map((node) => node.id) } : { mode: 'all' }}
         viewReset={viewReset}
+        headerAction={<LayoutSwitch layout={layout} onChange={setLayout} />}
         onSelect={selectNodes}
         onView={showView}
       />
     </main>
   )
+}
+
+function LayoutSwitch({ layout, onChange }: { layout: Layout; onChange: (layout: Layout) => void }) {
+  const options: Array<{ layout: Layout; label: string }> = [
+    { layout: 'graph', label: 'Graph only' },
+    { layout: 'split', label: 'Split view' },
+    { layout: 'agent', label: 'Agent only' },
+  ]
+  return (
+    <div aria-label="Workspace layout" className="layout-switch" role="group">
+      {options.map((option) => (
+        <button
+          aria-label={option.label}
+          aria-pressed={layout === option.layout}
+          key={option.layout}
+          onClick={() => onChange(option.layout)}
+          title={option.label}
+        >
+          <LayoutIcon layout={option.layout} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function LayoutIcon({ layout }: { layout: Layout }) {
+  if (layout === 'graph') return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="18" cy="17" r="2"/><path d="m8 11 8-3M8 13l8 3"/></svg>
+  if (layout === 'agent') return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5Z"/></svg>
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M15 4v16"/></svg>
 }
 
 function SunIcon() {

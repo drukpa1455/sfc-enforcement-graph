@@ -20,6 +20,9 @@
   --matter: #75ece0;
   --risk: #ff9580;
   --action: #e6c384;
+  --edge-evidence: #70a99f;
+  --edge-participation: #75ece0;
+  --edge-relationship: #e6c384;
   --shadow: 0 8px 24px #00000024;
 }
 
@@ -40,6 +43,9 @@
   --matter: #587f8a;
   --risk: #b8675b;
   --action: #9a7849;
+  --edge-evidence: #64877f;
+  --edge-participation: #2f7f78;
+  --edge-relationship: #9a7849;
   --shadow: 0 8px 22px #1d252214;
 }
 

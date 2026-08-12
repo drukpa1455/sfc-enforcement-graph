@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
 import {
@@ -13,6 +13,7 @@ import {
 } from '../shared/graph'
 
 type Family = 'source' | 'entity' | 'matter' | 'risk' | 'action'
+type Shape = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon'
 
 const familyByKind: Record<GraphNode['kind'], Family> = {
   release: 'source',
@@ -27,6 +28,10 @@ const familyByKind: Record<GraphNode['kind'], Family> = {
   action: 'action',
 }
 
+const shapeByFamily: Record<Family, Shape> = {
+  source: 'square', entity: 'circle', matter: 'diamond', risk: 'triangle', action: 'hexagon',
+}
+
 const colors: Record<Theme, Record<Family | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>> = {
   dark: {
     source: '#a7ffa0', entity: '#70a99f', matter: '#75ece0', risk: '#ff9580', action: '#e6c384',
@@ -36,6 +41,17 @@ const colors: Record<Theme, Record<Family | 'line' | 'muted' | 'surface' | 'text
     source: '#5c8f55', entity: '#2f7f78', matter: '#587f8a', risk: '#b8675b', action: '#9a7849',
     line: '#c6ded766', muted: '#31443f', surface: '#f7f9f8ee', text: '#1d2522', accent: '#2f7d72',
   },
+}
+
+const edgeColors: Record<Theme, Record<EdgeFamily, string>> = {
+  dark: { evidence: '#70a99f40', participation: '#75ece070', relationship: '#e6c38470' },
+  light: { evidence: '#64877f55', participation: '#2f7f7880', relationship: '#9a784980' },
+}
+
+const edgeDashes: Record<EdgeFamily, number[] | null> = {
+  evidence: null,
+  participation: [4, 3],
+  relationship: [1, 3],
 }
 
 interface Props {
@@ -120,6 +136,7 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           selected={nodeKinds}
           counts={nodeCounts}
           onToggle={toggleNodeKind}
+          renderSymbol={(kind) => <NodeSymbol kind={kind} />}
         />
         <FilterMenu
           label="Edges"
@@ -127,6 +144,7 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           selected={edgeFamilies}
           counts={edgeCounts}
           onToggle={toggleEdgeFamily}
+          renderSymbol={(family) => <EdgeSymbol family={family} />}
         />
         {filtered && <button onClick={resetFilters}>Reset</button>}
       </div>
@@ -164,8 +182,11 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
             `${nodeNames.get(endpointId(link.source)) ?? endpointId(link.source)} → ${nodeNames.get(endpointId(link.target)) ?? endpointId(link.target)}`,
             link.evidence,
           )}
-          linkColor={(link) => isIncident(link, selected) ? palette.accent : palette.line}
-          linkWidth={(link) => isIncident(link, selected) ? 1.6 : 0.65}
+          linkColor={(link) => isIncident(link, selected)
+            ? palette.accent
+            : edgeColors[theme][edgeFamily(link.kind)]}
+          linkLineDash={(link) => edgeDashes[edgeFamily(link.kind)]}
+          linkWidth={(link) => isIncident(link, selected) ? 1.6 : edgeFamily(link.kind) === 'evidence' ? 0.55 : 0.85}
           linkDirectionalArrowLength={focused ? 3 : 0}
           linkDirectionalArrowRelPos={0.96}
           onNodeClick={(node) => onSelectNodes([node.id])}
@@ -196,20 +217,42 @@ function FilterMenu<T extends string>({
   selected,
   counts: optionCounts,
   onToggle,
+  renderSymbol,
 }: {
   label: string
   options: readonly T[]
   selected: ReadonlySet<T>
   counts: Map<T, number>
   onToggle: (option: T) => void
+  renderSymbol: (option: T) => ReactNode
 }) {
+  const menu = useRef<HTMLDetailsElement>(null)
+
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (!menu.current?.contains(event.target as Node)) menu.current?.removeAttribute('open')
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !menu.current?.open) return
+      menu.current.removeAttribute('open')
+      menu.current.querySelector('summary')?.focus()
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [])
+
   return (
-    <details className="filter-menu">
+    <details className="filter-menu" ref={menu}>
       <summary>{menuLabel} <span>{selected.size}/{options.length}</span></summary>
       <div>
         {options.map((option) => (
           <label key={option}>
             <input type="checkbox" checked={selected.has(option)} onChange={() => onToggle(option)} />
+            {renderSymbol(option)}
             <span>{label(option)}</span>
             <small>{optionCounts.get(option) ?? 0}</small>
           </label>
@@ -217,6 +260,15 @@ function FilterMenu<T extends string>({
       </div>
     </details>
   )
+}
+
+function NodeSymbol({ kind }: { kind: GraphNode['kind'] }) {
+  const family = familyByKind[kind]
+  return <i aria-hidden="true" className="filter-node" data-family={family} data-shape={shapeByFamily[family]} />
+}
+
+function EdgeSymbol({ family }: { family: EdgeFamily }) {
+  return <i aria-hidden="true" className="filter-edge" data-edge={family} />
 }
 
 function toggle<T>(values: ReadonlySet<T>, value: T) {

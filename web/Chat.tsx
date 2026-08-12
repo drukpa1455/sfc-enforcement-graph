@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from '../shared/graph'
@@ -8,13 +8,14 @@ interface Props {
   graph: GraphData
   selected: GraphNode[]
   selectedLink?: GraphLink
+  headerAction: ReactNode
   view: GraphContext['view']
   viewReset: number
   onSelect: (ids: string[]) => void
   onView: (view: GraphView) => void
 }
 
-export function Chat({ graph, selected, selectedLink, view, viewReset, onSelect, onView }: Props) {
+export function Chat({ graph, selected, selectedLink, headerAction, view, viewReset, onSelect, onView }: Props) {
   const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
@@ -41,8 +42,11 @@ export function Chat({ graph, selected, selectedLink, view, viewReset, onSelect,
   return (
     <aside className="sidebar">
       <header>
-        <h2>Research agent</h2>
-        <p>Ask about entities, relationships, actions, or evidence.</p>
+        <div>
+          <h2>Research agent</h2>
+          <p>Ask about entities, relationships, actions, or evidence.</p>
+        </div>
+        {headerAction}
       </header>
       <div className="messages">
         <div className="selection">
