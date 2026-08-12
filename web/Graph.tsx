@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
-import type { GraphData, GraphLink, GraphNode } from '../shared/graph'
+import {
+  EDGE_FAMILIES,
+  edgeFamily,
+  filterGraph,
+  NODE_KINDS,
+  type EdgeFamily,
+  type GraphData,
+  type GraphLink,
+  type GraphNode,
+} from '../shared/graph'
 
 type Family = 'source' | 'entity' | 'matter' | 'risk' | 'action'
 
@@ -44,11 +53,20 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [hoveredId, setHoveredId] = useState<string>()
   const [showLabels, setShowLabels] = useState(true)
+  const [nodeKinds, setNodeKinds] = useState<Set<GraphNode['kind']>>(() => new Set(NODE_KINDS))
+  const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
+  const filteredGraph = useMemo(() => filterGraph(graph, nodeKinds, edgeFamilies), [edgeFamilies, graph, nodeKinds])
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
-  const renderedGraph = useMemo(() => structuredClone(graph), [graph])
-  const topologyKey = useMemo(() => graph.nodes.map((node) => node.id).join('\0'), [graph.nodes])
-  const nodeNames = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node.label])), [graph.nodes])
-  const focused = graph.nodes.length <= 40
+  const renderedGraph = useMemo(() => structuredClone(filteredGraph), [filteredGraph])
+  const topologyKey = useMemo(
+    () => `${filteredGraph.nodes.map((node) => node.id).join('\0')}|${[...edgeFamilies].sort().join(',')}`,
+    [edgeFamilies, filteredGraph.nodes],
+  )
+  const nodeNames = useMemo(() => new Map(filteredGraph.nodes.map((node) => [node.id, node.label])), [filteredGraph.nodes])
+  const nodeCounts = useMemo(() => counts(graph.nodes.map((node) => node.kind)), [graph.nodes])
+  const edgeCounts = useMemo(() => counts(graph.links.map((link) => edgeFamily(link.kind))), [graph.links])
+  const focused = filteredGraph.nodes.length <= 40
+  const filtered = nodeKinds.size < NODE_KINDS.length || edgeFamilies.size < EDGE_FAMILIES.length
   const palette = colors[theme]
 
   useEffect(() => {
@@ -62,17 +80,24 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
     const graphRenderer = renderer.current
     if (!graphRenderer || !size.width || !size.height) return
     graphRenderer.zoomToFit(0, focused ? 100 : 64)
-    const maximumZoom = graph.nodes.length <= 250 ? 2.2 : 1
+    const maximumZoom = filteredGraph.nodes.length <= 250 ? 2.2 : 1
     if (graphRenderer.zoom() > maximumZoom) graphRenderer.zoom(maximumZoom)
-  }, [focused, graph.nodes.length, size])
+  }, [filteredGraph.nodes.length, focused, size])
 
   useEffect(() => {
     const instance = renderer.current
     const charge = instance?.d3Force('charge') as { strength?: (value: number) => unknown } | undefined
-    charge?.strength?.(focused ? -70 : graph.nodes.length <= 250 ? -24 : -100)
+    charge?.strength?.(focused ? -70 : filteredGraph.nodes.length <= 250 ? -24 : -100)
     settled.current = false
     instance?.d3ReheatSimulation()
-  }, [focused, graph.nodes.length, size.width, topologyKey])
+  }, [filteredGraph.nodes.length, focused, size.width, topologyKey])
+
+  const toggleNodeKind = (kind: GraphNode['kind']) => setNodeKinds((current) => toggle(current, kind))
+  const toggleEdgeFamily = (family: EdgeFamily) => setEdgeFamilies((current) => toggle(current, family))
+  const resetFilters = () => {
+    setNodeKinds(new Set(NODE_KINDS))
+    setEdgeFamilies(new Set(EDGE_FAMILIES))
+  }
 
   useEffect(() => {
     settled.current = false
@@ -89,6 +114,21 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
         <button aria-pressed={showLabels} onClick={() => setShowLabels((visible) => !visible)}>
           <EyeIcon crossed={!showLabels} /> Labels
         </button>
+        <FilterMenu
+          label="Nodes"
+          options={NODE_KINDS}
+          selected={nodeKinds}
+          counts={nodeCounts}
+          onToggle={toggleNodeKind}
+        />
+        <FilterMenu
+          label="Edges"
+          options={EDGE_FAMILIES}
+          selected={edgeFamilies}
+          counts={edgeCounts}
+          onToggle={toggleEdgeFamily}
+        />
+        {filtered && <button onClick={resetFilters}>Reset</button>}
       </div>
       <div className="legend" aria-label="Graph key">
         <span><i data-shape="square" data-family="source" />Source</span>
@@ -145,8 +185,51 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           cooldownTicks={focused ? 80 : 160}
         />
       )}
+      {!filteredGraph.nodes.length && <p className="graph-empty">No nodes match these filters.</p>}
     </div>
   )
+}
+
+function FilterMenu<T extends string>({
+  label: menuLabel,
+  options,
+  selected,
+  counts: optionCounts,
+  onToggle,
+}: {
+  label: string
+  options: readonly T[]
+  selected: ReadonlySet<T>
+  counts: Map<T, number>
+  onToggle: (option: T) => void
+}) {
+  return (
+    <details className="filter-menu">
+      <summary>{menuLabel} <span>{selected.size}/{options.length}</span></summary>
+      <div>
+        {options.map((option) => (
+          <label key={option}>
+            <input type="checkbox" checked={selected.has(option)} onChange={() => onToggle(option)} />
+            <span>{label(option)}</span>
+            <small>{optionCounts.get(option) ?? 0}</small>
+          </label>
+        ))}
+      </div>
+    </details>
+  )
+}
+
+function toggle<T>(values: ReadonlySet<T>, value: T) {
+  const next = new Set(values)
+  if (next.has(value)) next.delete(value)
+  else next.add(value)
+  return next
+}
+
+function counts<T>(values: T[]) {
+  const result = new Map<T, number>()
+  for (const value of values) result.set(value, (result.get(value) ?? 0) + 1)
+  return result
 }
 
 function nodeValue(family: Family) {

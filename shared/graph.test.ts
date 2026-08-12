@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, overviewGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { describeGraphContext, edgeFamily, expandNodes, filterGraph, focusGraph, graphSchema, inspectNode, normalizeGraphContext, overviewGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
@@ -34,6 +34,21 @@ test('overview keeps recent sources, primary subjects, and assertions', () => {
   assert.equal(overview.nodes.filter((node) => node.kind === 'release').length, 50)
   assert.ok(overview.links.every((link) => ids.has(link.source) && ids.has(link.target)))
   assert.ok(overview.nodes.length < graph.nodes.length)
+})
+
+test('filters node kinds and semantic edge families', () => {
+  const filtered = filterGraph(
+    graph,
+    new Set(['release', 'risk', 'action']),
+    new Set(['evidence']),
+  )
+  const ids = new Set(filtered.nodes.map((node) => node.id))
+
+  assert.ok(filtered.nodes.every((node) => ['release', 'risk', 'action'].includes(node.kind)))
+  assert.ok(filtered.links.every((link) =>
+    ids.has(link.source) && ids.has(link.target) && edgeFamily(link.kind) === 'evidence',
+  ))
+  assert.ok(filtered.links.some((link) => link.kind === 'asserts'))
 })
 
 test('expansion adds exactly one relationship hop', () => {

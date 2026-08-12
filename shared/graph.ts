@@ -1,9 +1,12 @@
 import { z } from 'zod'
 
+export const NODE_KINDS = ['release', 'person', 'organization', 'fund', 'group', 'instrument', 'unknown', 'matter', 'risk', 'action'] as const
+export const EDGE_FAMILIES = ['evidence', 'participation', 'relationship'] as const
+
 export const graphNodeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  kind: z.enum(['release', 'person', 'organization', 'fund', 'group', 'instrument', 'unknown', 'matter', 'risk', 'action']),
+  kind: z.enum(NODE_KINDS),
   summary: z.string().min(1),
   releaseRefs: z.array(z.string().min(1)),
 })
@@ -60,6 +63,7 @@ export type GraphLink = z.infer<typeof graphLinkSchema>
 export type GraphData = z.infer<typeof graphSchema>
 export type GraphView = { mode: 'focus'; nodeIds: string[]; selectedNodeIds: string[] }
 export type GraphContext = z.infer<typeof graphContextSchema>
+export type EdgeFamily = typeof EDGE_FAMILIES[number]
 
 const OVERVIEW_RELEASE_LIMIT = 50
 
@@ -192,6 +196,31 @@ export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
     nodes,
     links,
     releases: graph.releases.filter((release) => releaseRefs.has(release.ref)),
+  }
+}
+
+const EVIDENCE_EDGES = new Set(['mentions', 'primary_mention', 'reports', 'asserts', 'references'])
+const PARTICIPATION_EDGES = new Set(['actor_of', 'target_of', 'subject_of', 'authority_for', 'affected_by', 'belongs_to'])
+
+export function edgeFamily(kind: string): EdgeFamily {
+  if (EVIDENCE_EDGES.has(kind)) return 'evidence'
+  if (PARTICIPATION_EDGES.has(kind)) return 'participation'
+  return 'relationship'
+}
+
+export function filterGraph(
+  graph: GraphData,
+  nodeKinds: ReadonlySet<GraphNode['kind']>,
+  edgeFamilies: ReadonlySet<EdgeFamily>,
+): GraphData {
+  const nodes = graph.nodes.filter((node) => nodeKinds.has(node.kind))
+  const ids = new Set(nodes.map((node) => node.id))
+  return {
+    nodes,
+    links: graph.links.filter((link) =>
+      ids.has(link.source) && ids.has(link.target) && edgeFamilies.has(edgeFamily(link.kind)),
+    ),
+    releases: graph.releases,
   }
 }
 
