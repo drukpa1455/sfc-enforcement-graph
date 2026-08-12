@@ -4,17 +4,22 @@ import { Graph } from './Graph'
 import { focusGraph, type GraphData, type GraphLink, type GraphView } from '../shared/graph'
 import './App.css'
 
-export type Theme = 'jade' | 'sapphire'
+export type Theme = 'light' | 'dark'
 
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedLink, setSelectedLink] = useState<GraphLink>()
   const [focusIds, setFocusIds] = useState<string[]>()
+  const [viewReset, setViewReset] = useState(0)
+  const [viewVersion, setViewVersion] = useState(0)
   const [error, setError] = useState<string>()
-  const [theme, setTheme] = useState<Theme>(() =>
-    localStorage.getItem('theme') === 'jade' ? 'jade' : 'sapphire',
-  )
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'light' || saved === 'jade') return 'light'
+    if (saved === 'dark' || saved === 'sapphire') return 'dark'
+    return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  })
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -42,6 +47,14 @@ export default function App() {
     setSelectedLink(undefined)
     setFocusIds(view.nodeIds)
     setSelectedIds(view.selectedNodeIds)
+    setViewVersion((version) => version + 1)
+  }, [])
+  const showAll = useCallback(() => {
+    setFocusIds(undefined)
+    setSelectedIds([])
+    setSelectedLink(undefined)
+    setViewReset((version) => version + 1)
+    setViewVersion((version) => version + 1)
   }, [])
   const selectNodes = useCallback((nodeIds: string[]) => {
     setSelectedLink(undefined)
@@ -65,13 +78,19 @@ export default function App() {
           </div>
           <div className="meta">
             <p>{focusIds ? `${visibleGraph.nodes.length} of ${graph.nodes.length}` : graph.nodes.length} nodes · {visibleGraph.links.length} links</p>
-            {focusIds && <button onClick={() => setFocusIds(undefined)}>Show all</button>}
-            <button onClick={() => setTheme(theme === 'sapphire' ? 'jade' : 'sapphire')}>
-              {theme === 'sapphire' ? 'Jade' : 'Sapphire'}
+            {focusIds && <button className="text-button" onClick={showAll}>Show all</button>}
+            <button
+              aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}
+              className="icon-button"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            >
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
           </div>
         </header>
         <Graph
+          key={viewVersion}
           graph={visibleGraph}
           selectedIds={selectedIds}
           onSelectLink={selectLink}
@@ -83,10 +102,19 @@ export default function App() {
         graph={graph}
         selected={selected}
         selectedLink={selectedLink}
-        visibleNodeIds={visibleGraph.nodes.slice(0, 80).map((node) => node.id)}
+        view={focusIds ? { mode: 'focus', nodeIds: visibleGraph.nodes.slice(0, 80).map((node) => node.id) } : { mode: 'all' }}
+        viewReset={viewReset}
         onSelect={selectNodes}
         onView={showView}
       />
     </main>
   )
+}
+
+function SunIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+}
+
+function MoonIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z"/></svg>
 }

@@ -1,26 +1,41 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from '../shared/graph'
-import { viewFromParts } from '../shared/graph'
+import { viewEventFromMessage } from '../shared/graph'
 
 interface Props {
   graph: GraphData
   selected: GraphNode[]
   selectedLink?: GraphLink
-  visibleNodeIds: string[]
+  view: GraphContext['view']
+  viewReset: number
   onSelect: (ids: string[]) => void
   onView: (view: GraphView) => void
 }
 
-export function Chat({ graph, selected, selectedLink, visibleNodeIds, onSelect, onView }: Props) {
+export function Chat({ graph, selected, selectedLink, view, viewReset, onSelect, onView }: Props) {
   const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
+  const appliedView = useRef<string | undefined>(undefined)
+  const historyBoundary = useRef(-1)
+  const ignoreViews = useRef(false)
 
   useEffect(() => {
-    const view = viewFromParts(messages.flatMap((message) => message.parts))
-    if (view) onView(view)
+    if (!viewReset) return
+    ignoreViews.current = true
+  }, [viewReset])
+
+  useEffect(() => {
+    if (ignoreViews.current) return
+    if (messages.length - 1 <= historyBoundary.current) return
+    const message = messages.at(-1)
+    if (!message) return
+    const event = viewEventFromMessage(message)
+    if (!event || event.key === appliedView.current) return
+    appliedView.current = event.key
+    onView(event.view)
   }, [messages, onView])
 
   return (
@@ -47,13 +62,15 @@ export function Chat({ graph, selected, selectedLink, visibleNodeIds, onSelect, 
         if (!text) return
         const context: GraphContext = {
           selectedNodeIds: selected.slice(0, 24).map((node) => node.id),
-          visibleNodeIds,
+          view,
           ...(selectedLink ? { selectedLink: {
             source: selectedLink.source,
             target: selectedLink.target,
             kind: selectedLink.kind,
           } } : {}),
         }
+        ignoreViews.current = false
+        historyBoundary.current = messages.length - 1
         void sendMessage({ text }, { body: { context } })
         setInput('')
       }}>

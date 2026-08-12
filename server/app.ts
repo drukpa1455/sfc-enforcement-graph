@@ -75,5 +75,5 @@ function withFocus<T extends { nodeIds: string[] }>(result: T, selectedNodeIds: 
 
 const chatRequestSchema = z.object({
   messages: z.array(z.unknown()),
-  context: graphContextSchema.default({ selectedNodeIds: [], visibleNodeIds: [] }),
+  context: graphContextSchema.default({ selectedNodeIds: [], view: { mode: 'all' } }),
 })
