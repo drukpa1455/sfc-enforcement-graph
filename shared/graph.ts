@@ -61,6 +61,8 @@ export type GraphData = z.infer<typeof graphSchema>
 export type GraphView = { mode: 'focus'; nodeIds: string[]; selectedNodeIds: string[] }
 export type GraphContext = z.infer<typeof graphContextSchema>
 
+const OVERVIEW_RELEASE_LIMIT = 50
+
 export function normalizeGraphContext(graph: GraphData, context: GraphContext): GraphContext {
   const known = new Set(graph.nodes.map((node) => node.id))
   const selectedNodeIds = uniqueKnown(context.selectedNodeIds, known)
@@ -191,6 +193,28 @@ export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
     links,
     releases: graph.releases.filter((release) => releaseRefs.has(release.ref)),
   }
+}
+
+export function overviewGraph(graph: GraphData): GraphData {
+  const releaseIds = new Set(
+    graph.releases
+      .toSorted((left, right) => right.issueDate.localeCompare(left.issueDate))
+      .slice(0, OVERVIEW_RELEASE_LIMIT)
+      .map((release) => `release:${release.ref}`),
+  )
+  const primary = new Set(
+    graph.links
+      .filter((link) => link.kind === 'primary_mention' && releaseIds.has(link.source))
+      .map((link) => link.target),
+  )
+  return focusGraph(
+    graph,
+    graph.nodes
+      .filter((node) => releaseIds.has(node.id) || (
+        primary.has(node.id) && ['person', 'organization', 'fund', 'instrument'].includes(node.kind)
+      ))
+      .map((node) => node.id),
+  )
 }
 
 function graphResult(graph: GraphData, nodeIds: string[]) {

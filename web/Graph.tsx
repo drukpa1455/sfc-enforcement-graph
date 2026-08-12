@@ -62,17 +62,17 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
     const graphRenderer = renderer.current
     if (!graphRenderer || !size.width || !size.height) return
     graphRenderer.zoomToFit(0, focused ? 100 : 64)
-    const maximumZoom = focused ? 2.2 : 1
+    const maximumZoom = graph.nodes.length <= 250 ? 2.2 : 1
     if (graphRenderer.zoom() > maximumZoom) graphRenderer.zoom(maximumZoom)
-  }, [focused, size])
+  }, [focused, graph.nodes.length, size])
 
   useEffect(() => {
     const instance = renderer.current
     const charge = instance?.d3Force('charge') as { strength?: (value: number) => unknown } | undefined
-    charge?.strength?.(focused ? -70 : -100)
+    charge?.strength?.(focused ? -70 : graph.nodes.length <= 250 ? -24 : -100)
     settled.current = false
     instance?.d3ReheatSimulation()
-  }, [focused, size.width, topologyKey])
+  }, [focused, graph.nodes.length, size.width, topologyKey])
 
   useEffect(() => {
     settled.current = false

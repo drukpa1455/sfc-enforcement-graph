@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from './Chat'
 import { Graph } from './Graph'
-import { focusGraph, type GraphData, type GraphLink, type GraphView } from '../shared/graph'
+import { focusGraph, overviewGraph, type GraphData, type GraphLink, type GraphView } from '../shared/graph'
 import './App.css'
 
 export type Theme = 'light' | 'dark'
@@ -40,7 +40,7 @@ export default function App() {
 
   const selected = graph?.nodes.filter((node) => selectedIds.includes(node.id)) ?? []
   const visibleGraph = useMemo(
-    () => graph && focusIds ? focusGraph(graph, focusIds) : graph,
+    () => graph && (focusIds ? focusGraph(graph, focusIds) : overviewGraph(graph)),
     [focusIds, graph],
   )
   const showView = useCallback((view: GraphView) => {
@@ -74,7 +74,9 @@ export default function App() {
         <header>
           <h1><span>SFC enforcement</span> Connected conduct</h1>
           <div className="meta">
-            <p>{focusIds ? `${visibleGraph.nodes.length} of ${graph.nodes.length}` : graph.nodes.length} nodes · {visibleGraph.links.length} links</p>
+            <p>{focusIds
+              ? `${visibleGraph.nodes.length} of ${graph.nodes.length} nodes · ${visibleGraph.links.length} links`
+              : `${visibleGraph.nodes.length} overview · ${graph.nodes.length} total · ${visibleGraph.links.length} links`}</p>
             {focusIds && <button className="text-button" onClick={showAll}>Show all</button>}
             <button
               aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}

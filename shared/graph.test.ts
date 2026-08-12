@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, overviewGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
@@ -25,6 +25,20 @@ test('focus keeps only nodes, internal links, and their releases', () => {
   assert.deepEqual(focused.nodes.map((node) => node.id), [broker, action])
   assert.equal(focused.links.length, 1)
   assert.ok(focused.releases.some((release) => release.ref === '26PR119'))
+})
+
+test('overview keeps the latest sources and their concrete primary subjects', () => {
+  const overview = overviewGraph(graph)
+  const ids = new Set(overview.nodes.map((node) => node.id))
+  assert.ok(overview.nodes.every((node) => ['release', 'person', 'organization', 'fund', 'instrument'].includes(node.kind)))
+  assert.ok(overview.nodes
+    .filter((node) => node.kind !== 'release')
+    .every((node) => graph.links.some((link) =>
+      link.kind === 'primary_mention' && link.target === node.id && ids.has(link.source),
+    )))
+  assert.equal(overview.nodes.filter((node) => node.kind === 'release').length, 50)
+  assert.ok(overview.links.every((link) => ids.has(link.source) && ids.has(link.target)))
+  assert.ok(overview.nodes.length < graph.nodes.length)
 })
 
 test('expansion adds exactly one relationship hop', () => {
