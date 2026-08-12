@@ -6,6 +6,7 @@ import { z } from 'zod'
 import graphJson from '../data/graph.json' with { type: 'json' }
 import { analyzeGraph } from '../shared/analytics.js'
 import {
+  componentGraph,
   communityGraph,
   describeGraphContext,
   expandNodes,
@@ -27,7 +28,7 @@ Use search before discussing an entity unless its graph ID is already selected i
 When the user says this, these, here, or the current view, use the supplied UI context.
 Tool results focus the visible graph. For requests to show or isolate a subject, search it and inspect the relevant result.
 Use expand to add one relationship hop to known node IDs. Use trace to connect two known node IDs.
-Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, bridging, or densely embedded nodes. Use community to inspect a node's algorithmic cluster.
+Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, bridging, or densely embedded nodes. Use community for a node's algorithmic cluster and component for its complete connected subgraph.
 Graph proximity is not evidence of misconduct. Describe every path through its explicit relationships and preserve each claim or action status.
 Distinguish allegations, findings, convictions, and sought actions. Cite release references.
 If the graph does not support an answer, say so. Keep answers concise.`
@@ -76,6 +77,14 @@ export const agent = new ToolLoopAgent({
       inputSchema: z.object({ id: z.string().min(1) }),
       execute: ({ id }) => {
         const result = communityGraph(graph, id)
+        return withFocus(result, [id])
+      },
+    }),
+    component: tool({
+      description: "Show the highest-PageRank members of a node's connected component. Membership is a structural clue, not evidence.",
+      inputSchema: z.object({ id: z.string().min(1) }),
+      execute: ({ id }) => {
+        const result = componentGraph(graph, id)
         return withFocus(result, [id])
       },
     }),

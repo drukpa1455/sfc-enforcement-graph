@@ -26,6 +26,8 @@ SFC releases → SQLite → typed extraction → graph.json → Graphology analy
   filter reversible.
 - Ranks recurrence, degree, PageRank, exact betweenness, and k-core over the
   semantic graph; connected components and Louvain communities expose clusters.
+- Gives the agent bounded component and community views, ranked internally by
+  PageRank so large clusters remain inspectable.
 - Traverses bounded one- to three-hop neighborhoods without inventing shortcut
   edges; proximity is never treated as evidence of misconduct.
 - Switches between a recent overview and the complete graph, with node- and

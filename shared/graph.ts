@@ -27,6 +27,7 @@ const graphMetricsSchema = z.object({
   degree: z.number().int().nonnegative(),
   releaseCount: z.number().int().positive(),
   componentSize: z.number().int().positive(),
+  component: z.string().min(1).nullable(),
   pagerank: z.number().nonnegative(),
   betweenness: z.number().min(0).max(1),
   core: z.number().int().nonnegative(),
@@ -173,16 +174,26 @@ export function rankGraph(
 }
 
 export function communityGraph(graph: GraphData, nodeId: string, limit = 80) {
+  const { cluster, ...result } = clusterGraph(graph, nodeId, 'community', limit)
+  return { ...result, community: cluster }
+}
+
+export function componentGraph(graph: GraphData, nodeId: string, limit = 80) {
+  const { cluster, ...result } = clusterGraph(graph, nodeId, 'component', limit)
+  return { ...result, component: cluster }
+}
+
+function clusterGraph(graph: GraphData, nodeId: string, metric: 'community' | 'component', limit: number) {
   const seed = graph.nodes.find((node) => node.id === nodeId)
-  const community = seed?.metrics.community
-  if (!seed || community === null || community === undefined) {
-    return { ...graphResult(graph, seed ? [nodeId] : []), community: null, truncated: false }
+  const cluster = seed?.metrics[metric]
+  if (!seed || cluster === null || cluster === undefined) {
+    return { ...graphResult(graph, seed ? [nodeId] : []), cluster: null, truncated: false }
   }
   const members = graph.nodes
-    .filter((node) => node.metrics.community === community)
+    .filter((node) => node.metrics[metric] === cluster)
     .toSorted((left, right) => right.metrics.pagerank - left.metrics.pagerank || left.label.localeCompare(right.label))
   const nodeIds = [nodeId, ...members.map((node) => node.id).filter((id) => id !== nodeId)].slice(0, limit)
-  return { ...graphResult(graph, nodeIds), community, truncated: members.length > limit }
+  return { ...graphResult(graph, nodeIds), cluster, truncated: members.length > limit }
 }
 
 export function neighborhood(

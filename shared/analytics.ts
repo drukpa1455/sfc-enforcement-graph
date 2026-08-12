@@ -31,8 +31,13 @@ export function analyzeGraph(source: SourceGraphData): GraphData {
   }
 
   const components = connectedComponents(topology)
+    .map((component) => component.toSorted())
+    .toSorted((left, right) => left[0].localeCompare(right[0]))
   const componentSizes = Object.fromEntries(components.flatMap((component) =>
     component.map((id) => [id, component.length]),
+  ))
+  const componentIds = Object.fromEntries(components.flatMap((component) =>
+    component.map((id) => [id, component[0]]),
   ))
   const ranks = pagerank(topology, { getEdgeWeight: null })
   const bridges = betweenness(topology, { getEdgeWeight: null, normalized: true })
@@ -48,6 +53,7 @@ export function analyzeGraph(source: SourceGraphData): GraphData {
         degree: topology.hasNode(node.id) ? topology.degree(node.id) : 0,
         releaseCount: node.releaseRefs.length,
         componentSize: componentSizes[node.id] ?? 1,
+        component: componentIds[node.id] ?? null,
         pagerank: ranks[node.id] ?? 0,
         betweenness: bridges[node.id] ?? 0,
         core: cores[node.id] ?? 0,
