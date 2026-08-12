@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
+import unicodedata
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -12,12 +15,13 @@ from qf_sfc.store import Database
 
 SOURCE_URL = "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo="
 DEFAULT_MODEL = "gpt-5.6"
+CANONICAL_ENTITY_KINDS = {"person", "organization", "fund", "instrument"}
 
 
 def export_graph(
     database: Database, model: str = DEFAULT_MODEL, language: str = "EN"
 ) -> dict[str, list[dict[str, Any]]]:
-    nodes: list[dict[str, Any]] = []
+    nodes: dict[str, dict[str, Any]] = {}
     links: list[dict[str, Any]] = []
     releases: list[dict[str, Any]] = []
     known_releases: set[str] = set()
@@ -27,7 +31,7 @@ def export_graph(
         ref = raw["newsRefNo"]
         known_releases.add(ref)
         release_id = f"release:{ref}"
-        nodes.append(node(release_id, f"{ref} · {raw['title'].strip()}", "release", raw["title"], ref))
+        add_node(nodes, node(release_id, f"{ref} · {raw['title'].strip()}", "release", raw["title"], ref))
         releases.append(
             {
                 "ref": ref,
@@ -41,28 +45,29 @@ def export_graph(
     for source_ref, target_ref in database.release_links(known_releases):
         target_id = f"release:{target_ref}"
         if target_ref not in known_releases:
-            nodes.append(node(target_id, target_ref, "release", "Referenced SFC release not stored locally.", target_ref))
+            add_node(nodes, node(target_id, target_ref, "release", "Referenced SFC release not stored locally.", target_ref))
             known_releases.add(target_ref)
         links.append(link(f"release:{source_ref}", target_id, "references", "Related SFC release", source_ref))
 
-    return {"nodes": nodes, "links": links, "releases": releases}
+    return {"nodes": list(nodes.values()), "links": links, "releases": releases}
 
 
 def project_release(
     ref: str,
     extraction: ReleaseExtraction,
-    nodes: list[dict[str, Any]],
+    nodes: dict[str, dict[str, Any]],
     links: list[dict[str, Any]],
 ) -> None:
-    mention_ids = {mention.id: f"mention:{ref}:{mention.id}" for mention in extraction.mentions}
+    mention_ids = {
+        mention.id: entity_id(mention_kind(mention.type), mention.name, ref, mention.id)
+        for mention in extraction.mentions
+    }
     matter_ids = {matter.id: f"matter:{ref}:{matter.id}" for matter in extraction.matters}
 
     for mention in extraction.mentions:
         mention_id = mention_ids[mention.id]
-        kind = {"person_group": "group", "financial_instrument": "instrument"}.get(
-            mention.type, mention.type
-        )
-        nodes.append(node(mention_id, mention.name, kind, mention.description, ref))
+        kind = mention_kind(mention.type)
+        add_node(nodes, node(mention_id, mention.name, kind, mention.description, ref))
         links.append(
             link(
                 f"release:{ref}",
@@ -86,14 +91,14 @@ def project_release(
 
     for matter in extraction.matters:
         matter_id = matter_ids[matter.id]
-        nodes.append(node(matter_id, matter.kind.replace("_", " ").title(), "matter", matter.description, ref))
+        add_node(nodes, node(matter_id, matter.kind.replace("_", " ").title(), "matter", matter.description, ref))
         links.append(link(f"release:{ref}", matter_id, "reports", matter.evidence.quote, ref))
         connect(links, mention_ids, matter.authority_ids, matter_id, "authority_for", matter.evidence.quote, ref)
         connect(links, mention_ids, matter.subject_ids, matter_id, "subject_of", matter.evidence.quote, ref)
 
     for risk in extraction.risks:
         risk_id = f"risk:{ref}:{risk.id}"
-        nodes.append(node(risk_id, risk.category.replace("_", " ").title(), "risk", risk.description, ref))
+        add_node(nodes, node(risk_id, risk.category.replace("_", " ").title(), "risk", risk.description, ref))
         links.append(link(f"release:{ref}", risk_id, "asserts", risk.evidence.quote, ref))
         if risk.matter_id:
             links.append(link(risk_id, matter_ids[risk.matter_id], "belongs_to", risk.evidence.quote, ref))
@@ -103,7 +108,7 @@ def project_release(
 
     for action in extraction.actions:
         action_id = f"action:{ref}:{action.id}"
-        nodes.append(node(action_id, action.type.replace("_", " ").title(), "action", action.description, ref))
+        add_node(nodes, node(action_id, action.type.replace("_", " ").title(), "action", action.description, ref))
         links.append(link(f"release:{ref}", action_id, "reports", action.evidence.quote, ref))
         if action.matter_id:
             links.append(link(action_id, matter_ids[action.matter_id], "belongs_to", action.evidence.quote, ref))
@@ -122,6 +127,32 @@ def connect(
     ref: str,
 ) -> None:
     links.extend(link(mention_ids[mention], target, kind, evidence, ref) for mention in mentions)
+
+
+def mention_kind(kind: str) -> str:
+    return {"person_group": "group", "financial_instrument": "instrument"}.get(kind, kind)
+
+
+def entity_id(kind: str, name: str, ref: str, local_id: str) -> str:
+    if kind not in CANONICAL_ENTITY_KINDS:
+        return f"mention:{ref}:{local_id}"
+    identity = f"{kind}\0{normalize_name(name)}".encode()
+    return f"entity:{kind}:{hashlib.sha256(identity).hexdigest()[:16]}"
+
+
+def normalize_name(name: str) -> str:
+    normalized = unicodedata.normalize("NFKC", name).casefold()
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def add_node(nodes: dict[str, dict[str, Any]], candidate: dict[str, Any]) -> None:
+    existing = nodes.get(candidate["id"])
+    if existing is None:
+        nodes[candidate["id"]] = candidate
+        return
+    for ref in candidate["releaseRefs"]:
+        if ref not in existing["releaseRefs"]:
+            existing["releaseRefs"].append(ref)
 
 
 def node(id: str, label: str, kind: str, summary: str, ref: str) -> dict[str, Any]:

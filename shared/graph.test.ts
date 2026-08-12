@@ -4,9 +4,9 @@ import graphJson from '../data/graph.json' with { type: 'json' }
 import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
-const suspected = 'mention:26PR119:mention_3'
-const regulator = 'mention:26PR119:mention_1'
-const broker = 'mention:26PR119:mention_2'
+const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
+const regulator = graph.nodes.find((node) => node.label === 'Securities and Futures Commission' && node.releaseRefs.includes('26PR119'))?.id ?? ''
+const broker = graph.nodes.find((node) => node.label === 'Futu Securities International (Hong Kong) Limited')?.id ?? ''
 const action = 'action:26PR119:action_1'
 
 test('search returns projection identities', () => {
@@ -24,7 +24,7 @@ test('focus keeps only nodes, internal links, and their releases', () => {
   const focused = focusGraph(graph, [broker, action])
   assert.deepEqual(focused.nodes.map((node) => node.id), [broker, action])
   assert.equal(focused.links.length, 1)
-  assert.deepEqual(focused.releases.map((release) => release.ref), ['26PR119'])
+  assert.ok(focused.releases.some((release) => release.ref === '26PR119'))
 })
 
 test('expansion adds exactly one relationship hop', () => {
@@ -37,8 +37,8 @@ test('expansion adds exactly one relationship hop', () => {
 
 test('trace returns the shortest evidence-backed path', () => {
   const result = tracePath(graph, broker, regulator)
-  assert.deepEqual(result.nodeIds, [broker, action, regulator])
-  assert.equal(result.links.length, 2)
+  assert.deepEqual(result.nodeIds, [broker, regulator])
+  assert.equal(result.links.length, 1)
 })
 
 test('tool output becomes an explicit graph view', () => {

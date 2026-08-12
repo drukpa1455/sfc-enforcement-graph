@@ -99,7 +99,6 @@ def sync(
         raise SfcError("incremental sync requires a complete baseline; run with --full first")
 
     known = database.release_versions(language)
-    latest_issue = max((issue for issue, _ in known.values()), default=None)
     result = SyncResult()
     page = 0
     archive_exhausted = False
@@ -114,7 +113,6 @@ def sync(
             archive_exhausted = True
             break
 
-        page_changed = False
         enforcement_items = [item for item in items if item.get("newsType") == "EF"]
         for item in enforcement_items:
             if limit is not None and result.checked >= limit:
@@ -129,7 +127,6 @@ def sync(
             content = client.content(ref, language)
             validate_content(content, ref, language)
             database.save_release(content)
-            page_changed = True
             if ref in known:
                 result = result.add(updated=1)
             else:
@@ -141,11 +138,6 @@ def sync(
         if exhausted:
             archive_exhausted = True
             break
-        if not full and limit is None and latest_issue is not None:
-            page_reaches_known_history = any(item.get("issueDate", "") <= latest_issue for item in items)
-            if page_reaches_known_history and not page_changed:
-                break
-
     if archive_exhausted and full:
         database.set_full_sync_completed(language, True)
     return result

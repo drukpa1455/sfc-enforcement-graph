@@ -76,6 +76,28 @@ def test_sync_downloads_new_and_skips_known(tmp_path: Path) -> None:
     assert client.content_calls == ["new"]
 
 
+def test_incremental_sync_finds_updates_beyond_an_unchanged_page(tmp_path: Path) -> None:
+    items = []
+    contents = {}
+    for number in range(PAGE_SIZE + 1):
+        ref = f"release{number}"
+        issue = f"2026-01-{PAGE_SIZE + 1 - number:02d}"
+        modified = "2026-02-01" if number == PAGE_SIZE else issue
+        items.append(item(ref, issue, modified))
+        contents[ref] = content(ref, issue, modified)
+
+    client = FakeClient(items, contents)
+    with Database(tmp_path / "test.sqlite3") as database:
+        for source in contents.values():
+            database.save_release({**source, "modificationTime": source["issueDate"]})
+        database.set_full_sync_completed("EN", True)
+        result = sync(client, database, limit=None)
+
+    assert result.updated == 1
+    assert result.unchanged == PAGE_SIZE
+    assert client.content_calls == [f"release{PAGE_SIZE}"]
+
+
 def test_sync_requires_complete_baseline(tmp_path: Path) -> None:
     with Database(tmp_path / "test.sqlite3") as database:
         with pytest.raises(SfcError, match="run with --full first"):
