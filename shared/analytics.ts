@@ -4,7 +4,7 @@ import { connectedComponents } from 'graphology-components'
 import { coreNumber } from 'graphology-cores'
 import * as betweennessModule from 'graphology-metrics/centrality/betweenness.js'
 import * as pagerankModule from 'graphology-metrics/centrality/pagerank.js'
-import { graphSchema, type GraphData, type SourceGraphData } from './graph.js'
+import { graphSchema, isAuthority, type GraphData, type SourceGraphData } from './graph.js'
 
 type NodeScores = (graph: UndirectedGraph, options?: Record<string, unknown>) => Record<string, number>
 const pagerank = pagerankModule.default as unknown as NodeScores
@@ -61,11 +61,4 @@ export function analyzeGraph(source: SourceGraphData): GraphData {
       },
     })),
   })
-}
-
-function isAuthority(node: SourceGraphData['nodes'][number]) {
-  const involvement = node.facets.involvement ?? []
-  return !involvement.includes('subject') && (
-    involvement.includes('authority') || node.releaseRefs.length > 10
-  )
 }
