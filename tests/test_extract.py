@@ -17,7 +17,7 @@ from sfc_enforcement_graph.extract import (
     extract_release,
     extract_releases,
     extract_text,
-    repair_evidence_case,
+    repair_evidence,
     single_attempt_provider,
     validate_evidence,
 )
@@ -64,9 +64,39 @@ def test_accepts_title_evidence() -> None:
 
 
 def test_repairs_unique_evidence_casing() -> None:
-    repaired = repair_evidence_case(extraction("example limited"), "Example Limited")
+    repaired = repair_evidence(extraction("example limited"), "Example Limited")
 
     assert repaired.mentions[0].evidence.quote == "Example Limited"
+
+
+def test_drops_only_an_unverifiable_optional_period() -> None:
+    data = extraction().model_dump(mode="json")
+    data["risks"] = [
+        {
+            "id": "risk_1",
+            "matter_id": None,
+            "authority_ids": [],
+            "subject_ids": ["mention_1"],
+            "affected_ids": [],
+            "type": "legal_noncompliance",
+            "label": "Example conduct",
+            "description": "Example conduct described in the release.",
+            "status": "reported",
+            "period": {
+                "text": "November 2009 to August 2025",
+                "evidence": {"quote": "November 2009 to August 2025"},
+            },
+            "geographies": [],
+            "negated": False,
+            "attributes": [],
+            "evidence": {"quote": "Example Limited"},
+        }
+    ]
+
+    repaired = repair_evidence(ReleaseExtraction.model_validate(data), "Example Limited")
+
+    assert repaired.risks[0].period is None
+    assert repaired.risks[0].evidence.quote == "Example Limited"
 
 
 def test_extract_releases_writes_validated_record(tmp_path: Path, monkeypatch) -> None:

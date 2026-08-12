@@ -110,7 +110,7 @@ def extract_release(
         usage=usage,
         retries=0,
     )
-    extraction = repair_evidence_case(result.output, f"{title}\n{text}")
+    extraction = repair_evidence(result.output, f"{title}\n{text}")
     validate_evidence(extraction, f"{title}\n{text}")
     return extraction, result
 
@@ -131,13 +131,26 @@ def single_attempt_provider(name: str) -> Provider[Any]:
     return provider
 
 
-def repair_evidence_case(extraction: ReleaseExtraction, source_text: str) -> ReleaseExtraction:
+def repair_evidence(extraction: ReleaseExtraction, source_text: str) -> ReleaseExtraction:
     data = extraction.model_dump(mode="json")
     for evidence in evidence_objects(data):
         matches = list(re.finditer(re.escape(evidence["quote"]), source_text, re.IGNORECASE))
         if len(matches) == 1:
             evidence["quote"] = matches[0].group()
+    drop_unverifiable_periods(data, source_text)
     return ReleaseExtraction.model_validate(data)
+
+
+def drop_unverifiable_periods(value: Any, source_text: str) -> None:
+    if isinstance(value, dict):
+        period = value.get("period")
+        if isinstance(period, dict) and period["evidence"]["quote"] not in source_text:
+            value["period"] = None
+        for child in value.values():
+            drop_unverifiable_periods(child, source_text)
+    elif isinstance(value, list):
+        for child in value:
+            drop_unverifiable_periods(child, source_text)
 
 
 def validate_evidence(extraction: ReleaseExtraction, source_text: str) -> None:
