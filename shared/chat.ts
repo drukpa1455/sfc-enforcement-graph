@@ -18,7 +18,7 @@ export function viewEventFromMessage(message: {
   if (message.role !== 'assistant') return undefined
   for (let index = message.parts.length - 1; index >= 0; index -= 1) {
     const part = message.parts[index]
-    if (part.state !== 'output-available' || !part.output || typeof part.output !== 'object') continue
+    if (part.type !== 'tool-show' || part.state !== 'output-available' || !part.output || typeof part.output !== 'object') continue
     const view = Reflect.get(part.output, 'view')
     if (!view || typeof view !== 'object' || Reflect.get(view, 'mode') !== 'focus') continue
     const nodeIds = Reflect.get(view, 'nodeIds')

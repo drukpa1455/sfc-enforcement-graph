@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
 import { analyzeGraph } from './analytics.js'
-import { communityGraph, componentGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath } from './graph.js'
+import { communityGraph, componentGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, graphView, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath } from './graph.js'
 
 const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
@@ -38,6 +38,14 @@ test('focus keeps only nodes, internal links, and their releases', () => {
   assert.deepEqual(focused.nodes.map((node) => node.id), [broker, action])
   assert.equal(focused.links.length, 1)
   assert.ok(focused.releases.some((release) => release.ref === '26PR119'))
+})
+
+test('graph view keeps canonical nodes and includes its selection', () => {
+  assert.deepEqual(graphView(graph, [action, 'missing', action], [broker, 'missing']), {
+    mode: 'focus',
+    nodeIds: [broker, action],
+    selectedNodeIds: [broker],
+  })
 })
 
 test('overview keeps recent sources, primary subjects, and assertions', () => {

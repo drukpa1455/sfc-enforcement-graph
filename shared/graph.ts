@@ -333,6 +333,16 @@ export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
   }
 }
 
+export function graphView(graph: GraphData, nodeIds: string[], selectedNodeIds: string[]): GraphView {
+  const known = new Set(graph.nodes.map((node) => node.id))
+  const selected = uniqueKnown(selectedNodeIds, known).slice(0, 24)
+  return {
+    mode: 'focus',
+    nodeIds: uniqueKnown([...selected, ...nodeIds], known).slice(0, 80),
+    selectedNodeIds: selected,
+  }
+}
+
 export function filterGraph(
   graph: GraphData,
   nodeKinds: ReadonlySet<GraphNode['kind']>,

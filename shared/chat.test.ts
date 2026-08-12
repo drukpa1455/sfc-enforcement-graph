@@ -48,16 +48,24 @@ test('tool-only history is removed while the active message stays intact', () =>
 
 test('tool output becomes an explicit graph view', () => {
   assert.deepEqual(viewFromParts([
-    { type: 'tool-search', state: 'output-available', output: {
+    { type: 'tool-show', state: 'output-available', output: {
       view: { mode: 'focus', nodeIds: ['broker', 'action'], selectedNodeIds: ['broker'] },
     } },
   ]), { mode: 'focus', nodeIds: ['broker', 'action'], selectedNodeIds: ['broker'] })
 })
 
+test('research tool output cannot change the graph view', () => {
+  assert.equal(viewFromParts([
+    { type: 'tool-inspect', state: 'output-available', output: {
+      view: { mode: 'focus', nodeIds: ['broker'], selectedNodeIds: ['broker'] },
+    } },
+  ]), undefined)
+})
+
 test('only the latest assistant message can change the graph view', () => {
   const assistant = {
     id: 'assistant-1', role: 'assistant', parts: [{
-      type: 'tool-search', toolCallId: 'call-1', state: 'output-available', output: {
+      type: 'tool-show', toolCallId: 'call-1', state: 'output-available', output: {
         view: { mode: 'focus', nodeIds: ['broker', 'action'], selectedNodeIds: ['broker'] },
       },
     }],
