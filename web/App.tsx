@@ -83,7 +83,13 @@ export default function App() {
     <main className="workspace" data-layout={layout}>
       <section className="canvas">
         <header>
-          <h1><span>SFC enforcement</span> Connected conduct</h1>
+          <div className="brand">
+            <AgosMark />
+            <div>
+              <h1><span>SFC Enforcement Graph</span><span className="compact-title">SFC Graph</span></h1>
+              <p>Evidence-linked intelligence <span>Independent</span></p>
+            </div>
+          </div>
           <div className="meta">
             <p>{focusIds
               ? `${visibleGraph.nodes.length} of ${graph.nodes.length} nodes · ${visibleGraph.links.length} links`
@@ -124,6 +130,28 @@ export default function App() {
         onView={showView}
       />
     </main>
+  )
+}
+
+function AgosMark() {
+  return (
+    <svg aria-hidden="true" className="brand-mark" viewBox="0 0 64 64">
+      <g className="brand-geometry" fill="none" strokeLinecap="round" strokeWidth="1.1">
+        <path d="M32 32 47.9 11.5M32 32 47.9 43.7M32 32 16.1 20.3M32 32 16.1 52.5M32 32 57.1 35.2M32 32 38.7 20M32 32 25.3 44M32 32 6.9 28.8M32 32 41.2 23.5M32 32 22.8 8.2M32 32 41.2 55.8M32 32 22.8 40.5"/>
+        <path d="M47.9 11.5 57.1 35.2M47.9 11.5 38.7 20M47.9 11.5 41.2 23.5M47.9 11.5 22.8 8.2M47.9 43.7 57.1 35.2M47.9 43.7 38.7 20M47.9 43.7 41.2 55.8M47.9 43.7 22.8 40.5"/>
+        <path d="M16.1 20.3 25.3 44M16.1 20.3 6.9 28.8M16.1 20.3 41.2 23.5M16.1 20.3 22.8 8.2M16.1 52.5 25.3 44M16.1 52.5 6.9 28.8M16.1 52.5 41.2 55.8M16.1 52.5 22.8 40.5"/>
+        <path d="M57.1 35.2 41.2 23.5M57.1 35.2 41.2 55.8M38.7 20 22.8 8.2M38.7 20 22.8 40.5M25.3 44 41.2 23.5M25.3 44 41.2 55.8M6.9 28.8 22.8 8.2M6.9 28.8 22.8 40.5"/>
+      </g>
+      <g className="brand-nodes">
+        <circle cx="47.9" cy="11.5" r="1.57"/><circle cx="47.9" cy="43.7" r="1.19"/>
+        <circle cx="16.1" cy="20.3" r="1.91"/><circle cx="16.1" cy="52.5" r="1.53"/>
+        <circle cx="57.1" cy="35.2" r="1.67"/><circle cx="38.7" cy="20" r="1.08"/>
+        <circle cx="25.3" cy="44" r="2.02"/><circle cx="6.9" cy="28.8" r="1.43"/>
+        <circle cx="41.2" cy="23.5" r="2.03"/><circle cx="22.8" cy="8.2" r="1.44"/>
+        <circle cx="41.2" cy="55.8" r="1.66"/><circle cx="22.8" cy="40.5" r="1.07"/>
+      </g>
+      <path d="M27.2 31.4 30.2 27.4 35.1 28 36.8 32.6 33.8 36.6 28.9 36Z" fill="var(--accent)"/>
+    </svg>
   )
 }
 
