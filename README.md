@@ -37,4 +37,7 @@ npm start
 ```
 
 The research agent can search, inspect, expand, and trace the shortest
-evidence-backed path. Each tool result carries a focused graph view.
+evidence-backed path. Each tool result carries a focused graph view; **Show all**
+restores the complete graph.
+
+Hovering a node or relationship shows its attributes. Clicking pins the full summary or evidence, with source-release links, in the agent sidebar.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { expandNodes, focusGraph, graphSchema, inspectNode, searchGraph, tracePath, viewFromParts } from './model.js'
+import { expandNodes, focusGraph, graphSchema, inspectNode, releaseSchema, searchGraph, tracePath, viewFromParts } from './model.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = 'mention:26PR119:mention_3'
@@ -47,4 +47,19 @@ test('tool output becomes an explicit graph view', () => {
       view: { mode: 'focus', nodeIds: [broker] },
     } },
   ]), { mode: 'focus', nodeIds: [broker] })
+})
+
+test('release links reject executable URL schemes', () => {
+  assert.equal(releaseSchema.safeParse({
+    ref: 'unsafe',
+    title: 'Unsafe release',
+    issueDate: '2026-01-01',
+    url: 'javascript:alert(1)',
+  }).success, false)
+  assert.equal(releaseSchema.safeParse({
+    ref: 'malformed',
+    title: 'Malformed release',
+    issueDate: '2026-01-01',
+    url: 'not-a-url',
+  }).success, false)
 })

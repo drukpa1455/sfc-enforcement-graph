@@ -20,7 +20,10 @@ export const releaseSchema = z.object({
   ref: z.string().min(1),
   title: z.string().min(1),
   issueDate: z.string().min(1),
-  url: z.string().url(),
+  url: z.string().url().refine(
+    (url) => URL.canParse(url) && ['http:', 'https:'].includes(new URL(url).protocol),
+    'release URL must use HTTP(S)',
+  ),
 })
 
 export const graphSchema = z.object({
