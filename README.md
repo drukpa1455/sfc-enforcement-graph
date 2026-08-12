@@ -3,6 +3,11 @@
 Explore connected entities, actions, and evidence from Hong Kong SFC enforcement
 releases with an interactive graph and grounded research agent.
 
+<p align="center">
+  <img src="docs/screenshots/overview-dark.png" alt="SFC Enforcement Graph in dark split view with its symbology key" width="720">
+  <img src="docs/screenshots/mobile-light.png" alt="Responsive SFC Enforcement Graph in light split view" width="240">
+</p>
+
 ```text
 SFC releases → SQLite → typed extraction → graph.json
                                                ↓
