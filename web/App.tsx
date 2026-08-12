@@ -112,7 +112,7 @@ export default function App() {
       <section className="canvas">
         <header>
           <div className="brand">
-            <AgosMark />
+            <GraphMark />
             <div>
               <h1><span>SFC Enforcement Graph</span><span className="compact-title">SFC Graph</span></h1>
               <p>Evidence-linked intelligence <span>Independent</span></p>
@@ -171,7 +171,7 @@ export default function App() {
   )
 }
 
-function AgosMark() {
+function GraphMark() {
   return (
     <svg aria-hidden="true" className="brand-mark" viewBox="0 0 64 64">
       <g className="brand-geometry" fill="none" strokeLinecap="round" strokeWidth="1.1">
