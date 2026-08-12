@@ -42,13 +42,14 @@ Which releases support this action?
 ```
 
 Agent tools can search, inspect, expand, rank, trace paths, and traverse bounded
-neighborhoods, communities, and components without moving the canvas. When a
-prompt requests a visualization, one final show action applies the researched
-node set. That focus remains reversible: use **Show all** or **Overview** to
-leave it. Current Key filters are sent with the chat context, so “this view”
-means the same visible node kinds and edge families the user sees. Completed
-tool payloads are removed from later requests while recent conversational text
-is retained, keeping multi-turn research bounded.
+neighborhoods, communities, and components without moving the canvas mid-search.
+One final show action synchronizes each concrete graph answer with the canvas.
+A single subject opens with its direct relationships; an assembled result keeps
+its exact node set. That focus remains reversible: use **Show all** or
+**Overview** to leave it. Current Key filters are sent with the chat context, so
+“this view” means the same visible node kinds and edge families the user sees.
+Completed tool payloads are removed from later requests while recent
+conversational text is retained, keeping multi-turn research bounded.
 
 | Question | Structural operation |
 |---|---|

@@ -4,6 +4,7 @@ export const NODE_KINDS = ['release', 'person', 'organization', 'fund', 'group',
 export const NODE_FAMILIES = ['source', 'entity', 'matter', 'risk', 'action'] as const
 export const EDGE_FAMILIES = ['evidence', 'participation', 'relationship'] as const
 export const GRAPH_METRICS = ['pagerank', 'betweenness', 'core', 'degree', 'releaseCount'] as const
+export const GRAPH_VIEW_MODES = ['exact', 'ego'] as const
 
 const facetsSchema = z.record(z.string(), z.array(z.string()))
 const factSchema = z.object({
@@ -105,6 +106,7 @@ export type GraphView = { mode: 'focus'; nodeIds: string[]; selectedNodeIds: str
 export type GraphContext = z.infer<typeof graphContextSchema>
 export type EdgeFamily = typeof EDGE_FAMILIES[number]
 export type GraphMetric = typeof GRAPH_METRICS[number]
+export type GraphViewMode = typeof GRAPH_VIEW_MODES[number]
 export type NodeFamily = typeof NODE_FAMILIES[number]
 
 export function nodeFamily(kind: GraphNode['kind']): NodeFamily {
@@ -333,12 +335,21 @@ export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
   }
 }
 
-export function graphView(graph: GraphData, nodeIds: string[], selectedNodeIds: string[]): GraphView {
+export function graphView(
+  graph: GraphData,
+  nodeIds: string[],
+  selectedNodeIds: string[],
+  mode?: GraphViewMode,
+): GraphView {
   const known = new Set(graph.nodes.map((node) => node.id))
   const selected = uniqueKnown(selectedNodeIds, known).slice(0, 24)
+  const seeds = uniqueKnown([...selected, ...nodeIds], known)
+  const visible = (mode ?? (seeds.length === 1 ? 'ego' : 'exact')) === 'ego'
+    ? expandNodes(graph, seeds).nodeIds
+    : seeds
   return {
     mode: 'focus',
-    nodeIds: uniqueKnown([...selected, ...nodeIds], known).slice(0, 80),
+    nodeIds: visible.slice(0, 80),
     selectedNodeIds: selected,
   }
 }
