@@ -1,7 +1,8 @@
 # SFC Enforcement Graph
 
-Explore connected entities, actions, and evidence from Hong Kong SFC enforcement
-releases with an interactive graph and grounded research agent.
+Independent, evidence-linked exploration of Hong Kong SFC enforcement actions.
+Browse the graph directly, ask a grounded research agent, or query the same
+validated data through a public read-only API.
 
 <p align="center">
   <img src="docs/screenshots/overview-dark.png" alt="SFC Enforcement Graph in dark split view with its symbology key" width="720">
@@ -11,105 +12,101 @@ releases with an interactive graph and grounded research agent.
 ```text
 SFC releases → SQLite → typed extraction → graph.json → Graphology analytics
                                                                ↓
-                                                  graph UI ↔ research agent
+                                  graph UI ↔ research agent ↔ REST API
 ```
 
-## What it does
+## Why it exists
 
-- Syncs public enforcement releases from the SFC.
-- Stores source text, extraction versions, and sync state in SQLite.
-- Projects source-linked mentions, assertions, facets, and evidence-backed facts
-  into a deterministic graph.
-- Coalesces exact normalized probable proper names while leaving descriptive
-  parties and generic groups source-local.
-- Lets the agent search, inspect, expand, and trace the graph while keeping every
-  filter reversible.
-- Ranks recurrence, degree, PageRank, exact betweenness, and k-core over the
-  semantic graph; connected components and Louvain communities expose clusters.
-- Gives the agent bounded component and community views, ranked internally by
-  PageRank so large clusters remain inspectable.
-- Traverses bounded one- to three-hop neighborhoods without inventing shortcut
-  edges; proximity is never treated as evidence of misconduct.
-- Switches between a recent overview and the complete graph, with node- and
-  edge-type filters for direct exploration.
-- Opens with the latest 50 releases, primary subjects, matters, risks, and
-  actions; the agent still queries and focuses the complete graph.
+- Keeps every graph claim attached to an exact source release and evidence quote.
+- Preserves allegation, finding, conviction, order, and sought-action status.
+- Searches, ranks, traces, and traverses bounded evidence-backed neighborhoods.
+- Computes degree, PageRank, exact betweenness, k-core, components, and Louvain
+  communities over the semantic graph with Graphology.
+- Exposes bounded component and community views, ranked internally by PageRank.
+- Makes every agent-driven graph focus and every visual filter reversible.
+- Exposes the complete dataset and graph metrics without model calls or credentials.
 
-SQLite is the source of truth. `data/graph.json` is a replaceable projection
-produced by `sfc-graph-export`; the browser never owns canonical graph data.
-Specific risk, action, relationship, and attribute terms remain source-shaped;
-controlled families support broad queries without erasing the original wording.
+Graph proximity and centrality are structural signals, not evidence of misconduct.
 
-```text
-src/sfc_enforcement_graph/  sync, extract, store, export
-shared/     graph contract and pure queries
-server/     HTTP and research agent
-web/        React interface
-```
-
-## Run locally
+## Quickstart
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js 22+, and an
 OpenAI API key for extraction and chat.
 
-```sh
+```bash
 uv sync --group dev
-npm install
+npm ci
 export OPENAI_API_KEY=...
+npm run dev
 ```
 
-Build the dataset:
+Open the graph at `http://localhost:5173` and documentation at
+`http://localhost:5173/docs/`.
 
-```sh
+The included graph is ready to use. Rebuild it from public SFC releases with:
+
+```bash
 uv run sfc-graph-sync --full
 uv run sfc-graph-extract --full --workers 4
 uv run sfc-graph-export
 ```
 
-Subsequent refreshes use the same straight-line workflow; sync reconciles all
-release metadata but downloads and extracts only changed work:
+Extraction makes model calls. Use `--limit N` before a full run when validating
+configuration or cost.
 
-```sh
-uv run sfc-graph-sync
-uv run sfc-graph-extract --full --workers 4
-uv run sfc-graph-export
+## Public API
+
+```bash
+curl http://localhost:8787/api/v1/metrics
+curl 'http://localhost:8787/api/v1/search?q=Futu%20Securities&limit=5'
+curl -L 'http://localhost:8787/api/v1/graph?download=1' -o graph.json
 ```
 
-Use `--limit N` on sync or extraction for bounded samples. Extraction defaults
-to one API call; `--full` processes every stale or missing release, while
-`--full --force` intentionally replaces every current output.
-`--workers N` bounds concurrent extraction calls; SQLite writes remain serialized.
+The versioned API supports search, node inspection, bounded neighborhoods,
+components, communities, metric rankings, summary metrics, and the complete JSON download. See the
+[API reference](docs/api.md).
 
-Start the application:
+## Documentation
 
-```sh
-npm run dev
+- [Quickstart](docs/quickstart.md)
+- [Using the graph](docs/usage.md)
+- [Methodology](docs/methodology.md)
+- [API](docs/api.md)
+- [Operations](docs/operations.md)
+
+MkDocs builds the same Jade light and Sapphire dark themes used by the app. The
+production server exposes the generated site at `/docs/`.
+
+## Architecture
+
+```text
+src/sfc_enforcement_graph/  sync, extract, store, analytics, export
+shared/                     graph contract and pure queries
+server/                     HTTP, public API, and research agent
+web/                        React interface
+docs/                       source documentation
 ```
 
-Vite serves the UI at `http://localhost:5173` and proxies `/api` to Hono on port
-`8787`.
+SQLite is the source of truth. `data/graph.json`, graph metrics, documentation,
+and browser state are replaceable projections with explicit rebuild paths.
 
-## Deploy
+## Verify and deploy
 
-Railway reads `railway.json`, builds the Vite client, starts the Hono server, and
-checks `/api/health`. Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL`.
-
-Chat accepts at most 12 requests per minute per server process. Override that
-single-instance budget with `CHAT_REQUESTS_PER_MINUTE`, and set a hard monthly
-spend limit with the model provider before making the service public.
-
-## Verify
-
-```sh
+```bash
 uv run pytest -q
 npm test
 npm run lint
 npm run build
+npm start
 ```
+
+Railway reads `railway.json`, builds the Vite application and MkDocs site,
+starts Hono, and checks `/api/health`. Set `OPENAI_API_KEY`, optionally
+`OPENAI_MODEL` and `CHAT_REQUESTS_PER_MINUTE`, and a hard provider spend limit.
 
 ## Data and scope
 
-The included dataset is derived from public [SFC enforcement
+The dataset derives from public [SFC enforcement
 news](https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/).
-Source links remain attached to releases, nodes, and relationships. This project
-is independent of the SFC and is not legal or investment advice.
+The original release remains authoritative. This project is independent of the
+SFC and is not legal or investment advice.

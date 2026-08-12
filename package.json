@@ -7,8 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web \"node --env-file-if-exists=.env --import tsx --watch server/index.ts\" \"vite\"",
-    "build": "tsc -b && vite build",
+    "dev": "npm run docs && concurrently -k -n api,web \"node --env-file-if-exists=.env --import tsx --watch server/index.ts\" \"vite\"",
+    "build": "tsc -b && npm run docs && vite build",
+    "docs": "uv run --frozen mkdocs build --strict",
+    "docs:serve": "uv run --frozen mkdocs serve --strict",
     "lint": "oxlint",
     "start": "node --env-file-if-exists=.env --import tsx server/index.ts",
     "test": "node --import tsx --test shared/*.test.ts server/*.test.ts"

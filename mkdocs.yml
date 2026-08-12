@@ -1,0 +1,59 @@
+site_name: SFC Enforcement Graph
+site_description: Evidence-linked exploration of Hong Kong SFC enforcement actions.
+docs_dir: docs
+site_dir: public/docs
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Using the graph: usage.md
+  - Methodology: methodology.md
+  - API: api.md
+  - Operations: operations.md
+  - Source: https://github.com/drukpa1455/sfc-enforcement-graph
+
+theme:
+  name: material
+  logo: assets/agos-mark.svg
+  favicon: assets/agos-favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      name: Jade
+      toggle:
+        icon: material/weather-night
+        name: Switch to Sapphire
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      name: Sapphire
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to Jade
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+
+plugins:
+  - search
+
+extra:
+  generator: false
+
+extra_css:
+  - stylesheets/agos.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+validation:
+  links:
+    anchors: warn
