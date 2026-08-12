@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
 import { Inspector } from './Inspector'
+import { priorityLabelIds } from './labels'
 import {
   EDGE_FAMILIES,
   NODE_FAMILIES,
@@ -89,6 +90,7 @@ export function Graph({
   const nodeNames = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node.label])), [graph.nodes])
   const nodeCounts = useMemo(() => counts(unfilteredGraph.nodes.map((node) => nodeFamily(node.kind))), [unfilteredGraph.nodes])
   const edgeCounts = useMemo(() => counts(unfilteredGraph.links.map((link) => link.family)), [unfilteredGraph.links])
+  const priorityLabels = useMemo(() => priorityLabelIds(graph.nodes, size.width), [graph.nodes, size.width])
   const focused = graph.nodes.length <= 40
   const filtered = nodeFamilies.size < NODE_FAMILIES.length || edgeFamilies.size < EDGE_FAMILIES.length
   const palette = colors[theme]
@@ -167,7 +169,7 @@ export function Graph({
             drawNode(context, node.x ?? 0, node.y ?? 0, radius, family, palette[family])
             if (selected.has(node.id)) drawSelection(context, node.x ?? 0, node.y ?? 0, radius, scale, palette.accent)
             const labelVisible = showLabels && (
-              selected.has(node.id) || node.id === hoveredId || focused || scale >= 2.6
+              selected.has(node.id) || node.id === hoveredId || priorityLabels.has(node.id) || scale >= 2.6
             )
             if (labelVisible) drawLabel(context, node, radius, scale, palette)
           }}
