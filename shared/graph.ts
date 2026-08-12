@@ -202,17 +202,15 @@ export function overviewGraph(graph: GraphData): GraphData {
       .slice(0, OVERVIEW_RELEASE_LIMIT)
       .map((release) => `release:${release.ref}`),
   )
-  const primary = new Set(
+  const included = new Set(
     graph.links
-      .filter((link) => link.kind === 'primary_mention' && releaseIds.has(link.source))
+      .filter((link) => releaseIds.has(link.source) && ['primary_mention', 'reports', 'asserts'].includes(link.kind))
       .map((link) => link.target),
   )
   return focusGraph(
     graph,
     graph.nodes
-      .filter((node) => releaseIds.has(node.id) || (
-        primary.has(node.id) && ['person', 'organization', 'fund', 'instrument'].includes(node.kind)
-      ))
+      .filter((node) => releaseIds.has(node.id) || included.has(node.id))
       .map((node) => node.id),
   )
 }

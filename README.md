@@ -18,8 +18,8 @@ SFC releases → SQLite → typed extraction → graph.json
   instruments while leaving generic groups source-local.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
   filter reversible.
-- Opens with the latest 50 releases and their concrete primary subjects; the
-  agent still queries and focuses the complete graph.
+- Opens with the latest 50 releases, primary subjects, matters, risks, and
+  actions; the agent still queries and focuses the complete graph.
 
 SQLite is the source of truth. `data/graph.json` is a replaceable projection
 produced by `qf-sfc-export`; the browser never owns canonical graph data.

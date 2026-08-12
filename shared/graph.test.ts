@@ -27,15 +27,10 @@ test('focus keeps only nodes, internal links, and their releases', () => {
   assert.ok(focused.releases.some((release) => release.ref === '26PR119'))
 })
 
-test('overview keeps the latest sources and their concrete primary subjects', () => {
+test('overview keeps recent sources, primary subjects, and assertions', () => {
   const overview = overviewGraph(graph)
   const ids = new Set(overview.nodes.map((node) => node.id))
-  assert.ok(overview.nodes.every((node) => ['release', 'person', 'organization', 'fund', 'instrument'].includes(node.kind)))
-  assert.ok(overview.nodes
-    .filter((node) => node.kind !== 'release')
-    .every((node) => graph.links.some((link) =>
-      link.kind === 'primary_mention' && link.target === node.id && ids.has(link.source),
-    )))
+  assert.ok(['matter', 'risk', 'action'].every((kind) => overview.nodes.some((node) => node.kind === kind)))
   assert.equal(overview.nodes.filter((node) => node.kind === 'release').length, 50)
   assert.ok(overview.links.every((link) => ids.has(link.source) && ids.has(link.target)))
   assert.ok(overview.nodes.length < graph.nodes.length)
