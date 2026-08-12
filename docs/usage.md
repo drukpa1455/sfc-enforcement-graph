@@ -6,7 +6,6 @@ The complete graph opens beside the research agent. Use **Overview** when you
 want a quieter recent slice.
 
 - **Show all / Overview** changes the graph scope without changing canonical data.
-- **Labels** shows or hides dynamic node labels.
 - **Key** explains node shapes and edge styles; every row is also a filter.
 - **Reset** restores all node and edge families after filtering.
 - **Graph, split, and agent** controls change layout without losing context.

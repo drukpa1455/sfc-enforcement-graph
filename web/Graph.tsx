@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
 import { Inspector } from './Inspector'
-import { priorityLabelIds } from './labels'
 import {
   EDGE_FAMILIES,
   NODE_FAMILIES,
@@ -79,8 +78,6 @@ export function Graph({
   const renderer = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined)
   const settled = useRef(false)
   const [size, setSize] = useState({ width: 0, height: 0 })
-  const [hoveredId, setHoveredId] = useState<string>()
-  const [showLabels, setShowLabels] = useState(true)
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
   const renderedGraph = useMemo(() => structuredClone(graph), [graph])
   const topologyKey = useMemo(
@@ -90,7 +87,6 @@ export function Graph({
   const nodeNames = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node.label])), [graph.nodes])
   const nodeCounts = useMemo(() => counts(unfilteredGraph.nodes.map((node) => nodeFamily(node.kind))), [unfilteredGraph.nodes])
   const edgeCounts = useMemo(() => counts(unfilteredGraph.links.map((link) => link.family)), [unfilteredGraph.links])
-  const priorityLabels = useMemo(() => priorityLabelIds(graph.nodes, size.width), [graph.nodes, size.width])
   const focused = graph.nodes.length <= 40
   const filtered = nodeFamilies.size < NODE_FAMILIES.length || edgeFamilies.size < EDGE_FAMILIES.length
   const palette = colors[theme]
@@ -128,7 +124,6 @@ export function Graph({
 
   useEffect(() => {
     settled.current = false
-    setHoveredId(undefined)
   }, [topologyKey])
 
   useEffect(() => {
@@ -138,9 +133,6 @@ export function Graph({
   return (
     <div className="graph" ref={container}>
       <div className="graph-tools">
-        <button aria-pressed={showLabels} onClick={() => setShowLabels((visible) => !visible)}>
-          <EyeIcon crossed={!showLabels} /> Labels
-        </button>
         <KeyMenu
           edgeCounts={edgeCounts}
           edges={edgeFamilies}
@@ -168,10 +160,6 @@ export function Graph({
             const radius = nodeRadius(family)
             drawNode(context, node.x ?? 0, node.y ?? 0, radius, family, palette[family])
             if (selected.has(node.id)) drawSelection(context, node.x ?? 0, node.y ?? 0, radius, scale, palette.accent)
-            const labelVisible = showLabels && (
-              selected.has(node.id) || node.id === hoveredId || priorityLabels.has(node.id) || scale >= 2.6
-            )
-            if (labelVisible) drawLabel(context, node, radius, scale, palette)
           }}
           linkLabel={(link) => tooltip(
             label(link.kind),
@@ -191,7 +179,6 @@ export function Graph({
             source: endpointId(link.source),
             target: endpointId(link.target),
           })}
-          onNodeHover={(node) => setHoveredId(node?.id)}
           onBackgroundClick={() => onSelectNodes([])}
           linkHoverPrecision={8}
           onEngineStop={() => {
@@ -334,31 +321,6 @@ function drawSelection(context: CanvasRenderingContext2D, x: number, y: number, 
   context.stroke()
 }
 
-function drawLabel(
-  context: CanvasRenderingContext2D,
-  node: NodeObject<GraphNode>,
-  radius: number,
-  scale: number,
-  palette: Record<NodeFamily | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>,
-) {
-  const text = compactLabel(node.label)
-  const fontSize = (node.kind === 'release' ? 11 : 10.5) / scale
-  const padding = 3 / scale
-  context.font = `500 ${fontSize}px Inter, ui-sans-serif, system-ui, sans-serif`
-  const width = context.measureText(text).width
-  const x = (node.x ?? 0) + radius + 4 / scale
-  const y = (node.y ?? 0) - fontSize / 2 - padding
-  context.fillStyle = palette.surface
-  context.fillRect(x - padding, y, width + padding * 2, fontSize + padding * 2)
-  context.fillStyle = palette.text
-  context.textBaseline = 'top'
-  context.fillText(text, x, y + padding)
-}
-
-function compactLabel(value: string) {
-  return value.length > 42 ? `${value.slice(0, 39)}…` : value
-}
-
 function isIncident(link: GraphLink, selected: Set<string>) {
   return selected.has(endpointId(link.source)) || selected.has(endpointId(link.target))
 }
@@ -373,10 +335,6 @@ function tooltip(title: string, meta: string, body: string) {
 
 function label(value: string) {
   return value.replaceAll('_', ' ')
-}
-
-function EyeIcon({ crossed }: { crossed: boolean }) {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>{crossed && <path d="m4 4 16 16"/>}</svg>
 }
 
 function LegendIcon() {
