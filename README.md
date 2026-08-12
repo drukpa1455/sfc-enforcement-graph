@@ -14,6 +14,8 @@ SFC releases → SQLite → typed extraction → graph.json
 - Syncs public enforcement releases from the SFC.
 - Stores source text, extraction versions, and sync state in SQLite.
 - Projects source-linked mentions and assertions into a deterministic graph.
+- Coalesces exact normalized names for named people, organizations, funds, and
+  instruments while leaving generic groups source-local.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
   filter reversible.
 
@@ -46,8 +48,8 @@ uv run qf-sfc-extract --full --workers 4
 uv run qf-sfc-export
 ```
 
-Subsequent refreshes use the same straight-line workflow; sync and extraction
-skip unchanged work by default:
+Subsequent refreshes use the same straight-line workflow; sync reconciles all
+release metadata but downloads and extracts only changed work:
 
 ```sh
 uv run qf-sfc-sync

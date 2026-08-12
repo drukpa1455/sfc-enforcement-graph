@@ -24,14 +24,62 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     ids = {node["id"] for node in graph["nodes"]}
     assert {
         "release:26PR104",
-        "mention:26PR104:mention_1",
         "matter:26PR104:matter_1",
         "risk:26PR104:risk_1",
         "action:26PR104:action_1",
         "release:24PR97",
     } <= ids
+    assert any(node["id"].startswith("entity:person:") for node in graph["nodes"])
     assert any(link["kind"] == "target_of" for link in graph["links"])
     assert any(link["kind"] == "references" for link in graph["links"])
+
+
+def test_coalesces_exact_named_entities_across_releases(tmp_path: Path) -> None:
+    first = {
+        "newsRefNo": "first",
+        "lang": "EN",
+        "title": "First release",
+        "html": "<p>Body</p>",
+        "issueDate": "2026-01-02",
+        "modificationTime": "2026-01-02",
+    }
+    second = {**first, "newsRefNo": "second", "title": "Second release", "issueDate": "2026-01-01"}
+    with Database(tmp_path / "test.sqlite3") as database:
+        for raw in (first, second):
+            database.save_release(raw)
+            database.save_extraction(raw, SCHEMA_VERSION, "test-model", extraction(), None, None)
+
+        graph = export_graph(database, "test-model")
+
+    regulators = [node for node in graph["nodes"] if node["label"] == "Securities and Futures Commission"]
+    assert len(regulators) == 1
+    assert regulators[0]["releaseRefs"] == ["first", "second"]
+
+
+def test_keeps_generic_groups_local_to_their_release(tmp_path: Path) -> None:
+    first = {
+        "newsRefNo": "first",
+        "lang": "EN",
+        "title": "First release",
+        "html": "<p>Body</p>",
+        "issueDate": "2026-01-02",
+        "modificationTime": "2026-01-02",
+    }
+    second = {**first, "newsRefNo": "second", "title": "Second release", "issueDate": "2026-01-01"}
+    group = extraction()
+    group["mentions"][0]["type"] = "person_group"
+    with Database(tmp_path / "test.sqlite3") as database:
+        for raw in (first, second):
+            database.save_release(raw)
+            database.save_extraction(raw, SCHEMA_VERSION, "test-model", group, None, None)
+
+        graph = export_graph(database, "test-model")
+
+    groups = [node for node in graph["nodes"] if node["label"] == "Wong Tim Hi"]
+    assert {node["id"] for node in groups} == {
+        "mention:first:mention_1",
+        "mention:second:mention_1",
+    }
 
 
 def test_ignores_historical_schema(tmp_path: Path) -> None:
