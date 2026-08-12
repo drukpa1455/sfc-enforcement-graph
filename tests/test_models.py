@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from pydantic import ValidationError
 
-from qf_sfc.models import ReleaseExtraction
+from sfc_enforcement_graph.models import ReleaseExtraction
 
 
 def extraction() -> dict:

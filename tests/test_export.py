@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from qf_sfc.export import export_graph
-from qf_sfc.models import SCHEMA_VERSION
-from qf_sfc.store import Database
+from sfc_enforcement_graph.export import export_graph
+from sfc_enforcement_graph.models import SCHEMA_VERSION
+from sfc_enforcement_graph.store import Database
 from test_models import extraction
 
 

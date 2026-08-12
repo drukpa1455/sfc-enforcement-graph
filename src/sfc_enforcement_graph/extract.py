@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
-from qf_sfc.models import SCHEMA_VERSION, ReleaseExtraction
-from qf_sfc.sync import SfcError
-from qf_sfc.store import Database
+from sfc_enforcement_graph.models import SCHEMA_VERSION, ReleaseExtraction
+from sfc_enforcement_graph.sync import SfcError
+from sfc_enforcement_graph.store import Database
 
 DEFAULT_MODEL = "gpt-5.6"
 DEFAULT_MAX_OUTPUT_TOKENS = 12_000

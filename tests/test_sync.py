@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from qf_sfc.sync import PAGE_SIZE, SfcError, sync
-from qf_sfc.store import Database, related_release_refs
+from sfc_enforcement_graph.sync import PAGE_SIZE, SfcError, sync
+from sfc_enforcement_graph.store import Database, related_release_refs
 
 
 class FakeClient:
