@@ -246,6 +246,13 @@ class Period(Model):
     )
     evidence: Evidence
 
+    @model_validator(mode="before")
+    @classmethod
+    def evidence_defaults_to_text(cls, value: object) -> object:
+        if isinstance(value, dict) and "evidence" not in value and isinstance(value.get("text"), str):
+            return {**value, "evidence": {"quote": value["text"]}}
+        return value
+
     @model_validator(mode="after")
     def dates_are_ordered(self) -> Self:
         if self.start and self.end and self.start > self.end:
