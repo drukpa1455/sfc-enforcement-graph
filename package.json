@@ -7,10 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web \"tsx watch server/index.ts\" \"vite\"",
+    "dev": "concurrently -k -n api,web \"node --env-file-if-exists=.env --import tsx --watch server/index.ts\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "start": "tsx server/index.ts",
+    "start": "node --env-file-if-exists=.env --import tsx server/index.ts",
     "test": "node --import tsx --test src/*.test.ts"
   },
   "dependencies": {
