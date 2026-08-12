@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from './Chat'
 import { Graph } from './Graph'
-import { focusGraph, type GraphData, type GraphView } from './model'
+import { focusGraph, type GraphData, type GraphLink, type GraphView } from './model'
 import './App.css'
 
 export type Theme = 'jade' | 'sapphire'
@@ -9,6 +9,7 @@ export type Theme = 'jade' | 'sapphire'
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedLink, setSelectedLink] = useState<GraphLink>()
   const [focusIds, setFocusIds] = useState<string[]>()
   const [error, setError] = useState<string>()
   const [theme, setTheme] = useState<Theme>(() =>
@@ -38,8 +39,17 @@ export default function App() {
     [focusIds, graph],
   )
   const showView = useCallback((view: GraphView) => {
+    setSelectedLink(undefined)
     setFocusIds(view.nodeIds)
-    setSelectedIds(view.nodeIds)
+    setSelectedIds(view.selectedNodeIds)
+  }, [])
+  const selectNodes = useCallback((nodeIds: string[]) => {
+    setSelectedLink(undefined)
+    setSelectedIds(nodeIds)
+  }, [])
+  const selectLink = useCallback((link: GraphLink) => {
+    setSelectedLink(link)
+    setSelectedIds([link.source, link.target])
   }, [])
 
   if (error) return <main className="centered">{error}</main>
@@ -61,9 +71,22 @@ export default function App() {
             </button>
           </div>
         </header>
-        <Graph graph={visibleGraph} selectedIds={selectedIds} onSelect={setSelectedIds} theme={theme} />
+        <Graph
+          graph={visibleGraph}
+          selectedIds={selectedIds}
+          onSelectLink={selectLink}
+          onSelectNodes={selectNodes}
+          theme={theme}
+        />
       </section>
-      <Chat selected={selected} onSelect={setSelectedIds} onView={showView} />
+      <Chat
+        graph={graph}
+        selected={selected}
+        selectedLink={selectedLink}
+        visibleNodeIds={visibleGraph.nodes.slice(0, 80).map((node) => node.id)}
+        onSelect={selectNodes}
+        onView={showView}
+      />
     </main>
   )
 }
