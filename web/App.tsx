@@ -31,6 +31,7 @@ export default function App() {
   const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
   const [layout, setLayout] = useState<Layout>('split')
   const [viewReset, setViewReset] = useState(0)
+  const [promptRequest, setPromptRequest] = useState({ version: 0, text: '' })
   const [error, setError] = useState<string>()
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme')
@@ -94,6 +95,10 @@ export default function App() {
     setSelectedLink(link)
     setSelectedIds([link.source, link.target])
   }, [])
+  const suggestPrompt = useCallback((text: string) => {
+    setLayout('split')
+    setPromptRequest((request) => ({ version: request.version + 1, text }))
+  }, [])
 
   if (error) return <main className="centered">{error}</main>
   if (!graph || !scopedGraph || !visibleGraph) return <main className="centered">Loading graph…</main>
@@ -136,12 +141,16 @@ export default function App() {
         </header>
         <Graph
           graph={visibleGraph}
+          completeGraph={graph}
           unfilteredGraph={scopedGraph}
           nodeFamilies={nodeFamilies}
           edgeFamilies={edgeFamilies}
           onNodeFamilies={setNodeFamilies}
           onEdgeFamilies={setEdgeFamilies}
           selectedIds={selectedIds}
+          selectedNodes={selected}
+          selectedLink={selectedLink}
+          onPrompt={suggestPrompt}
           onSelectLink={selectLink}
           onSelectNodes={selectNodes}
           theme={theme}
@@ -151,6 +160,7 @@ export default function App() {
         graph={graph}
         selected={selected}
         selectedLink={selectedLink}
+        promptRequest={promptRequest}
         view={view}
         viewReset={viewReset}
         headerAction={<LayoutSwitch layout={layout} onChange={setLayout} />}

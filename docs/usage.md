@@ -17,9 +17,11 @@ explicit relationships.
 
 ## Inspect evidence
 
-Select a node to see its summary, facets, facts, metrics, and source releases in
-the agent panel. Select an edge to inspect its direction, type, evidence quote,
-and source release. Release links open the original SFC publication.
+Select a node to open its summary, facets, facts, metrics, and source releases
+inside the graph. Select an edge to inspect its direction, type, evidence quote,
+and source release. Release links open the original SFC publication. Suggested
+questions adapt to the selected node or edge and prefill the agent composer for
+review before sending.
 
 The selection ring means selected, not implicated. A line means the source
 supports that exact typed relationship; it does not license a broader inference.
@@ -42,7 +44,9 @@ Agent tools can search, inspect, expand, rank, trace paths, traverse one- to
 three-hop neighborhoods, and open bounded community or connected-component
 views. A focused result remains reversible: use **Show all** or **Overview** to
 leave it. Current Key filters are sent with the chat context, so “this view”
-means the same visible node kinds and edge families the user sees.
+means the same visible node kinds and edge families the user sees. Completed
+tool payloads are removed from later requests while recent conversational text
+is retained, keeping multi-turn research bounded.
 
 | Question | Structural operation |
 |---|---|

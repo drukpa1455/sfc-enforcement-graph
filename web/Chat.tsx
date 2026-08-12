@@ -10,13 +10,14 @@ interface Props {
   selected: GraphNode[]
   selectedLink?: GraphLink
   headerAction: ReactNode
+  promptRequest: { version: number; text: string }
   view: GraphContext['view']
   viewReset: number
   onSelect: (ids: string[]) => void
   onView: (view: GraphView) => void
 }
 
-export function Chat({ graph, selected, selectedLink, headerAction, view, viewReset, onSelect, onView }: Props) {
+export function Chat({ graph, selected, selectedLink, headerAction, promptRequest, view, viewReset, onSelect, onView }: Props) {
   const transport = useMemo(() => new DefaultChatTransport({
     api: '/api/chat',
     prepareSendMessagesRequest: ({ messages, body }) => ({
@@ -25,6 +26,7 @@ export function Chat({ graph, selected, selectedLink, headerAction, view, viewRe
   }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
+  const composer = useRef<HTMLInputElement>(null)
   const appliedView = useRef<string | undefined>(undefined)
   const historyBoundary = useRef(-1)
   const ignoreViews = useRef(false)
@@ -45,6 +47,12 @@ export function Chat({ graph, selected, selectedLink, headerAction, view, viewRe
     onView(event.view)
   }, [messages, onView])
 
+  useEffect(() => {
+    if (!promptRequest.version) return
+    setInput(promptRequest.text)
+    composer.current?.focus()
+  }, [promptRequest])
+
   return (
     <aside className="sidebar">
       <header>
@@ -55,9 +63,7 @@ export function Chat({ graph, selected, selectedLink, headerAction, view, viewRe
         {headerAction}
       </header>
       <div className="messages">
-        <div className="selection">
-          <SelectionDetail graph={graph} nodes={selected} link={selectedLink} onSelect={onSelect} />
-        </div>
+        <SelectionContext graph={graph} nodes={selected} link={selectedLink} onClear={() => onSelect([])} />
         {messages.map((message) => (
           <div className={`message ${message.role}`} key={message.id}>
             {message.parts.map((part, index) => <MessagePart graph={graph} part={part} key={index} />)}
@@ -84,7 +90,7 @@ export function Chat({ graph, selected, selectedLink, headerAction, view, viewRe
         void sendMessage({ text }, { body: { context } })
         setInput('')
       }}>
-        <input aria-label="Ask the research agent" placeholder="Find Wong Tim Hi…" value={input} onChange={(event) => setInput(event.target.value)} />
+        <input ref={composer} aria-label="Ask the research agent" placeholder="Find Wong Tim Hi…" value={input} onChange={(event) => setInput(event.target.value)} />
         <button disabled={!input.trim() || status !== 'ready'}>Ask</button>
       </form>
     </aside>
@@ -135,86 +141,31 @@ function toolActivity(graph: GraphData, part: ChatPart) {
   return `${done ? 'Used' : 'Using'} ${label(tool)}${done ? '' : '…'}`
 }
 
-function SelectionDetail({ graph, nodes, link, onSelect }: {
+function SelectionContext({ graph, nodes, link, onClear }: {
   graph: GraphData
   nodes: GraphNode[]
   link?: GraphLink
-  onSelect: (ids: string[]) => void
+  onClear: () => void
 }) {
-  if (link) return <LinkDetail graph={graph} link={link} />
-  if (nodes.length === 1) return <NodeDetail graph={graph} node={nodes[0]} />
-  if (nodes.length) return nodes.map((node) => (
-    <button key={node.id} onClick={() => onSelect([node.id])}>{node.label}</button>
-  ))
-  return <p className="empty">Select a node or ask the agent to focus the graph.</p>
-}
-
-function NodeDetail({ graph, node }: { graph: GraphData; node: GraphNode }) {
+  const text = link
+    ? `${nodeLabel(graph, link.source)} → ${nodeLabel(graph, link.target)}`
+    : nodes.length === 1
+      ? nodes[0].label
+      : nodes.length
+        ? `${nodes.length} nodes`
+        : 'No graph selection'
   return (
-    <article className="detail">
-      <span>{label(node.kind)}</span>
-      <h3>{node.label}</h3>
-      <p>{node.summary}</p>
-      <dl className="facts">
-        {metricFacts(node).map(([name, value]) => (
-          <div key={name}><dt>{label(name)}</dt><dd>{value}</dd></div>
-        ))}
-        {Object.entries(node.facets).flatMap(([name, values]) => values.map((value) => (
-          <div key={`${name}:${value}`}><dt>{label(name)}</dt><dd>{value}</dd></div>
-        )))}
-        {node.facts.map((fact, index) => (
-          <div key={`${fact.name}:${index}`} title={fact.evidence}><dt>{label(fact.name)}</dt><dd>{fact.value}</dd></div>
-        ))}
-      </dl>
-      <ReleaseLinks graph={graph} refs={node.releaseRefs} />
-    </article>
+    <div className="chat-context">
+      <span>Context</span><strong>{text}</strong>
+      {(link || nodes.length > 0) && <button aria-label="Clear graph context" onClick={onClear}>×</button>}
+    </div>
   )
 }
 
-function LinkDetail({ graph, link }: { graph: GraphData; link: GraphLink }) {
-  const source = graph.nodes.find((node) => node.id === link.source)?.label ?? link.source
-  const target = graph.nodes.find((node) => node.id === link.target)?.label ?? link.target
-  return (
-    <article className="detail">
-      <span>{label(link.kind)}</span>
-      <h3>{source} → {target}</h3>
-      <p>{link.evidence}</p>
-      <dl className="facts">
-        {Object.entries(link.facets).flatMap(([name, values]) => values.map((value) => (
-          <div key={`${name}:${value}`}><dt>{label(name)}</dt><dd>{value}</dd></div>
-        )))}
-        {link.facts.map((fact, index) => (
-          <div key={`${fact.name}:${index}`} title={fact.evidence}><dt>{label(fact.name)}</dt><dd>{fact.value}</dd></div>
-        ))}
-      </dl>
-      <ReleaseLinks graph={graph} refs={[link.releaseRef]} />
-    </article>
-  )
-}
-
-function ReleaseLinks({ graph, refs }: { graph: GraphData; refs: string[] }) {
-  return <div className="release-links">{refs.map((ref) => {
-    const release = graph.releases.find((candidate) => candidate.ref === ref)
-    return release
-      ? <a href={release.url} key={ref} rel="noreferrer" target="_blank">{ref} ↗</a>
-      : <span key={ref}>{ref}</span>
-  })}</div>
+function nodeLabel(graph: GraphData, id: string) {
+  return graph.nodes.find((node) => node.id === id)?.label ?? id
 }
 
 function label(value: string) {
   return value.replaceAll('_', ' ')
-}
-
-function metricFacts(node: GraphNode): Array<[string, string]> {
-  const metrics: Array<[string, number]> = [
-    ['release count', node.metrics.releaseCount],
-    ['degree', node.metrics.degree],
-    ['component size', node.metrics.componentSize],
-    ['core', node.metrics.core],
-    ['betweenness', node.metrics.betweenness],
-  ]
-  const facts = metrics.filter(([, value]) => value > 0).map(([name, value]) => [name, String(value)] as [string, string])
-  if (node.metrics.component !== null) facts.push(['component', String(node.metrics.component)])
-  if (node.metrics.community !== null) facts.push(['community', String(node.metrics.community)])
-  return facts
 }
