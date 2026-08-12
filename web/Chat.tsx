@@ -132,6 +132,7 @@ function toolActivity(graph: GraphData, part: ChatPart) {
   if (tool === 'expand') return `${done ? 'Expanded' : 'Expanding'} selection${done ? '' : '…'}`
   if (tool === 'neighborhood') return `${done ? 'Mapped' : 'Mapping'} ${value('depth') || '2'}-hop neighborhood${done ? '' : '…'}`
   if (tool === 'rank') return `${done ? 'Ranked' : 'Ranking'} by ${label(value('metric'))}${done ? '' : '…'}`
+  if (tool === 'show') return `${done ? 'Focused' : 'Focusing'} graph${done ? '' : '…'}`
   if (tool === 'trace') {
     const path = `${nodeName(value('sourceId'))} → ${nodeName(value('targetId'))}`
     return `${done ? 'Traced' : 'Tracing'} ${path}${done ? '' : '…'}`

@@ -12,6 +12,7 @@ import {
   expandNodes,
   GRAPH_METRICS,
   graphContextSchema,
+  graphView,
   sourceGraphSchema,
   inspectNode,
   neighborhood,
@@ -34,7 +35,7 @@ const azure = createOpenAI({
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
 Use search before discussing an entity unless its graph ID is already selected in the current UI context. Use inspect for relationships and evidence.
 When the user says this, these, here, or the current view, use the supplied UI context.
-Tool results focus the visible graph. For requests to show or isolate a subject, search it and inspect the relevant result.
+Research tools do not change the visible graph. When the user asks to show, focus, isolate, map, or visualize something, finish the research and then call show exactly once with the complete intended node set and primary selection.
 Use expand to add one relationship hop to known node IDs. Use trace to connect two known node IDs.
 Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, bridging, or densely embedded nodes. Use community for a node's algorithmic cluster and component for its complete connected subgraph.
 Graph proximity is not evidence of misconduct. Describe every path through its explicit relationships and preserve each claim or action status.
@@ -55,20 +56,17 @@ export const agent = new ToolLoopAgent({
     search: tool({
       description: 'Find graph nodes by name, kind, or summary text.',
       inputSchema: z.object({ query: z.string().min(1) }),
-      execute: ({ query }) => {
-        const result = searchGraph(graph, query)
-        return withFocus(result, result.nodeIds)
-      },
+      execute: ({ query }) => searchGraph(graph, query),
     }),
     inspect: tool({
       description: 'Inspect one graph node, its immediate neighbors, source releases, and evidence.',
       inputSchema: z.object({ id: z.string().min(1) }),
-      execute: ({ id }) => withFocus(inspectNode(graph, id) ?? { nodeIds: [], error: `Unknown node: ${id}` }, [id]),
+      execute: ({ id }) => inspectNode(graph, id) ?? { nodeIds: [], error: `Unknown node: ${id}` },
     }),
     expand: tool({
       description: 'Add one relationship hop around known node IDs, preserving the existing nodes.',
       inputSchema: z.object({ nodeIds: z.array(z.string().min(1)).min(1).max(24) }),
-      execute: ({ nodeIds }) => withFocus(expandNodes(graph, nodeIds), nodeIds),
+      execute: ({ nodeIds }) => expandNodes(graph, nodeIds),
     }),
     neighborhood: tool({
       description: 'Traverse one to three evidence-backed relationship hops, excluding document and authority hubs by default.',
@@ -77,24 +75,17 @@ export const agent = new ToolLoopAgent({
         depth: z.number().int().min(1).max(3).default(2),
         includeHubs: z.boolean().default(false),
       }),
-      execute: ({ nodeIds, depth, includeHubs }) =>
-        withFocus(neighborhood(graph, nodeIds, depth, 80, includeHubs), nodeIds),
+      execute: ({ nodeIds, depth, includeHubs }) => neighborhood(graph, nodeIds, depth, 80, includeHubs),
     }),
     community: tool({
-      description: "Show the highest-PageRank members of a node's Louvain community. Community membership is a structural clue, not evidence.",
+      description: "Get the highest-PageRank members of a node's Louvain community. Community membership is a structural clue, not evidence.",
       inputSchema: z.object({ id: z.string().min(1) }),
-      execute: ({ id }) => {
-        const result = communityGraph(graph, id)
-        return withFocus(result, [id])
-      },
+      execute: ({ id }) => communityGraph(graph, id),
     }),
     component: tool({
-      description: "Show the highest-PageRank members of a node's connected component. Membership is a structural clue, not evidence.",
+      description: "Get the highest-PageRank members of a node's connected component. Membership is a structural clue, not evidence.",
       inputSchema: z.object({ id: z.string().min(1) }),
-      execute: ({ id }) => {
-        const result = componentGraph(graph, id)
-        return withFocus(result, [id])
-      },
+      execute: ({ id }) => componentGraph(graph, id),
     }),
     rank: tool({
       description: 'Rank graph nodes by recurrence, degree, PageRank, exact betweenness, or k-core.',
@@ -104,15 +95,23 @@ export const agent = new ToolLoopAgent({
         limit: z.number().int().min(1).max(24).default(12),
         includeHubs: z.boolean().default(false),
       }),
-      execute: ({ metric, kinds, limit, includeHubs }) => {
-        const result = rankGraph(graph, metric, kinds, limit, includeHubs)
-        return withFocus(result, result.nodeIds)
-      },
+      execute: ({ metric, kinds, limit, includeHubs }) => rankGraph(graph, metric, kinds, limit, includeHubs),
     }),
     trace: tool({
       description: 'Find the shortest evidence-backed path between two known node IDs, regardless of link direction.',
       inputSchema: z.object({ sourceId: z.string().min(1), targetId: z.string().min(1) }),
-      execute: ({ sourceId, targetId }) => withFocus(tracePath(graph, sourceId, targetId), [sourceId, targetId]),
+      execute: ({ sourceId, targetId }) => tracePath(graph, sourceId, targetId),
+    }),
+    show: tool({
+      description: 'Set the visible graph once after research when the user explicitly asks to show, focus, isolate, map, or visualize results.',
+      inputSchema: z.object({
+        nodeIds: z.array(z.string().min(1)).min(1).max(80),
+        selectedNodeIds: z.array(z.string().min(1)).max(24).default([]),
+      }),
+      execute: ({ nodeIds, selectedNodeIds }) => {
+        const view = graphView(graph, nodeIds, selectedNodeIds)
+        return view.nodeIds.length ? { nodeIds: view.nodeIds, view } : { nodeIds: [], error: 'No known graph nodes' }
+      },
     }),
   },
 })
@@ -157,10 +156,6 @@ app.post('/api/chat', bodyLimit({
 })
 
 export default app
-
-function withFocus<T extends { nodeIds: string[] }>(result: T, selectedNodeIds: string[]) {
-  return { ...result, view: { mode: 'focus' as const, nodeIds: result.nodeIds, selectedNodeIds } }
-}
 
 const chatRequestSchema = z.object({
   messages: z.array(z.unknown()).min(1).max(CHAT_MESSAGE_LIMIT),

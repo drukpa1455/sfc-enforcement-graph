@@ -75,7 +75,7 @@ function suggestedPrompts(graph: GraphData, nodes: GraphNode[], link?: GraphLink
   ]
   return [
     `What role does ${node.label} play in the enforcement record?`,
-    `Explain ${node.label}'s role and show direct relationships with supporting evidence.`,
+    `In two sentences, explain ${node.label}'s role and show direct relationships with supporting evidence.`,
   ]
 }
 

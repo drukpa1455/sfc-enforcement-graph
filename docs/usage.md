@@ -41,9 +41,10 @@ Show this entity's community and connected component.
 Which releases support this action?
 ```
 
-Agent tools can search, inspect, expand, rank, trace paths, traverse one- to
-three-hop neighborhoods, and open bounded community or connected-component
-views. A focused result remains reversible: use **Show all** or **Overview** to
+Agent tools can search, inspect, expand, rank, trace paths, and traverse bounded
+neighborhoods, communities, and components without moving the canvas. When a
+prompt requests a visualization, one final show action applies the researched
+node set. That focus remains reversible: use **Show all** or **Overview** to
 leave it. Current Key filters are sent with the chat context, so “this view”
 means the same visible node kinds and edge families the user sees. Completed
 tool payloads are removed from later requests while recent conversational text
