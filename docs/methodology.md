@@ -41,9 +41,11 @@ or owning node type is the stable query dimension. Geography records only an
 actual source-stated relationship, never a place that merely appears in a name.
 
 Every evidence quote must be an exact contiguous substring of the title or
-release text. Invalid evidence rejects the extraction. SQLite records the
-extraction schema version, model, run identifier, and usage so stale outputs can
-be identified and replaced deliberately.
+release text. An unsupported optional period is discarded without discarding
+its containing evidence-backed relationship, risk, or action; other invalid
+evidence rejects the extraction. SQLite records the extraction schema version,
+model, run identifier, and usage so stale outputs can be identified and
+replaced deliberately.
 
 ### 3. Resolve identity and export
 
