@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from './Chat'
 import { Graph } from './Graph'
-import { focusGraph, type GraphData, type GraphLink, type GraphView } from './model'
+import { focusGraph, type GraphData, type GraphLink, type GraphView } from '../shared/graph'
 import './App.css'
 
 export type Theme = 'jade' | 'sapphire'

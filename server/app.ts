@@ -3,7 +3,7 @@ import { createAgentUIStreamResponse, isStepCount, tool, ToolLoopAgent } from 'a
 import { Hono } from 'hono'
 import { z } from 'zod'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, graphContextSchema, graphSchema, inspectNode, searchGraph, tracePath } from '../src/model.js'
+import { describeGraphContext, expandNodes, graphContextSchema, graphSchema, inspectNode, searchGraph, tracePath } from '../shared/graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const instructions = `You answer questions only from the supplied SFC enforcement graph.

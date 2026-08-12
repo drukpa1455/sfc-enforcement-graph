@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
-import type { GraphData, GraphLink, GraphNode } from './model'
+import type { GraphData, GraphLink, GraphNode } from '../shared/graph'
 
 const palettes: Record<Theme, Record<GraphNode['kind'], string>> = {
   sapphire: {

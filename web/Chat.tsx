@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from './model'
-import { viewFromParts } from './model'
+import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from '../shared/graph'
+import { viewFromParts } from '../shared/graph'
 
 interface Props {
   graph: GraphData

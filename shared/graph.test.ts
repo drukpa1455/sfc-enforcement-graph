@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewFromParts } from './model.js'
+import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = 'mention:26PR119:mention_3'
