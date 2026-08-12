@@ -24,6 +24,32 @@
   font-size: 0.75rem;
 }
 
+.meta {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.meta p {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.meta button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.68rem;
+  padding: 0.32rem 0.58rem;
+}
+
+.meta button:hover {
+  background: var(--element);
+}
+
 .eyebrow {
   color: var(--accent);
   font-size: 0.7rem;
@@ -120,7 +146,7 @@ h1 {
 }
 
 .composer input {
-  background: var(--background);
+  background: var(--element);
   border: 1px solid var(--line);
   border-radius: 0.5rem;
   color: var(--text);
@@ -131,10 +157,10 @@ h1 {
 }
 
 .composer button {
-  background: var(--text);
+  background: var(--accent);
   border: 0;
   border-radius: 0.5rem;
-  color: var(--background);
+  color: #13201c;
   cursor: pointer;
   font: inherit;
   padding: 0.65rem 0.8rem;

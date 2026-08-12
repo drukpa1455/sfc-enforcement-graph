@@ -4,10 +4,20 @@ import { Graph } from './Graph'
 import type { GraphData } from './model'
 import './App.css'
 
+export type Theme = 'jade' | 'sapphire'
+
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [error, setError] = useState<string>()
+  const [theme, setTheme] = useState<Theme>(() =>
+    localStorage.getItem('theme') === 'jade' ? 'jade' : 'sapphire',
+  )
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   useEffect(() => {
     fetch('/api/graph')
@@ -34,9 +44,14 @@ export default function App() {
             <p className="eyebrow">SFC enforcement</p>
             <h1>Connected conduct</h1>
           </div>
-          <p>{graph.nodes.length} nodes · {graph.links.length} links</p>
+          <div className="meta">
+            <p>{graph.nodes.length} nodes · {graph.links.length} links</p>
+            <button onClick={() => setTheme(theme === 'sapphire' ? 'jade' : 'sapphire')}>
+              {theme === 'sapphire' ? 'Jade' : 'Sapphire'}
+            </button>
+          </div>
         </header>
-        <Graph graph={graph} selectedIds={selectedIds} onSelect={setSelectedIds} />
+        <Graph graph={graph} selectedIds={selectedIds} onSelect={setSelectedIds} theme={theme} />
       </section>
       <Chat selected={selected} onSelect={setSelectedIds} />
     </main>

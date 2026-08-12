@@ -1,17 +1,30 @@
 :root {
-  color: #20211f;
-  background: #f7f7f3;
+  color: var(--text);
+  background: var(--background);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --accent: #b3492f;
-  --background: #f7f7f3;
-  --line: #deded6;
-  --muted: #77786f;
-  --panel: #efefe9;
-  --text: #20211f;
+  color-scheme: dark;
+  --accent: #a7ffa0;
+  --background: #212c2a;
+  --element: #171f1d;
+  --line: #a7ffa033;
+  --muted: #f8f8f2aa;
+  --panel: #1e2826;
+  --text: #f8f8f2;
+}
+
+:root[data-theme='jade'] {
+  color-scheme: light;
+  --accent: #2f7d72;
+  --background: #f4f7f5;
+  --element: #dbe8e4;
+  --line: #c6ded7;
+  --muted: #31443f;
+  --panel: #dde8e4;
+  --text: #1d2522;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; background: var(--background); }
 button, input { font: inherit; }
