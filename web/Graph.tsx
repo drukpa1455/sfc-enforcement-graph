@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-force-graph-2d'
 import type { Theme } from './App'
 import {
@@ -14,6 +14,8 @@ import {
 
 type Family = 'source' | 'entity' | 'matter' | 'risk' | 'action'
 type Shape = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon'
+
+const NODE_FAMILIES: readonly Family[] = ['source', 'entity', 'matter', 'risk', 'action']
 
 const familyByKind: Record<GraphNode['kind'], Family> = {
   release: 'source',
@@ -69,8 +71,12 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [hoveredId, setHoveredId] = useState<string>()
   const [showLabels, setShowLabels] = useState(true)
-  const [nodeKinds, setNodeKinds] = useState<Set<GraphNode['kind']>>(() => new Set(NODE_KINDS))
+  const [nodeFamilies, setNodeFamilies] = useState<Set<Family>>(() => new Set(NODE_FAMILIES))
   const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
+  const nodeKinds = useMemo(
+    () => new Set(NODE_KINDS.filter((kind) => nodeFamilies.has(familyByKind[kind]))),
+    [nodeFamilies],
+  )
   const filteredGraph = useMemo(() => filterGraph(graph, nodeKinds, edgeFamilies), [edgeFamilies, graph, nodeKinds])
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
   const renderedGraph = useMemo(() => structuredClone(filteredGraph), [filteredGraph])
@@ -79,10 +85,10 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
     [edgeFamilies, filteredGraph.nodes],
   )
   const nodeNames = useMemo(() => new Map(filteredGraph.nodes.map((node) => [node.id, node.label])), [filteredGraph.nodes])
-  const nodeCounts = useMemo(() => counts(graph.nodes.map((node) => node.kind)), [graph.nodes])
+  const nodeCounts = useMemo(() => counts(graph.nodes.map((node) => familyByKind[node.kind])), [graph.nodes])
   const edgeCounts = useMemo(() => counts(graph.links.map((link) => edgeFamily(link.kind))), [graph.links])
   const focused = filteredGraph.nodes.length <= 40
-  const filtered = nodeKinds.size < NODE_KINDS.length || edgeFamilies.size < EDGE_FAMILIES.length
+  const filtered = nodeFamilies.size < NODE_FAMILIES.length || edgeFamilies.size < EDGE_FAMILIES.length
   const palette = colors[theme]
 
   useEffect(() => {
@@ -108,10 +114,10 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
     instance?.d3ReheatSimulation()
   }, [filteredGraph.nodes.length, focused, size.width, topologyKey])
 
-  const toggleNodeKind = (kind: GraphNode['kind']) => setNodeKinds((current) => toggle(current, kind))
+  const toggleNodeFamily = (family: Family) => setNodeFamilies((current) => toggle(current, family))
   const toggleEdgeFamily = (family: EdgeFamily) => setEdgeFamilies((current) => toggle(current, family))
   const resetFilters = () => {
-    setNodeKinds(new Set(NODE_KINDS))
+    setNodeFamilies(new Set(NODE_FAMILIES))
     setEdgeFamilies(new Set(EDGE_FAMILIES))
   }
 
@@ -130,30 +136,15 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
         <button aria-pressed={showLabels} onClick={() => setShowLabels((visible) => !visible)}>
           <EyeIcon crossed={!showLabels} /> Labels
         </button>
-        <FilterMenu
-          label="Nodes"
-          options={NODE_KINDS}
-          selected={nodeKinds}
-          counts={nodeCounts}
-          onToggle={toggleNodeKind}
-          renderSymbol={(kind) => <NodeSymbol kind={kind} />}
-        />
-        <FilterMenu
-          label="Edges"
-          options={EDGE_FAMILIES}
-          selected={edgeFamilies}
-          counts={edgeCounts}
-          onToggle={toggleEdgeFamily}
-          renderSymbol={(family) => <EdgeSymbol family={family} />}
+        <KeyMenu
+          edgeCounts={edgeCounts}
+          edges={edgeFamilies}
+          nodeCounts={nodeCounts}
+          nodes={nodeFamilies}
+          onToggleEdge={toggleEdgeFamily}
+          onToggleNode={toggleNodeFamily}
         />
         {filtered && <button onClick={resetFilters}>Reset</button>}
-      </div>
-      <div className="legend" aria-label="Graph key">
-        <span><i data-shape="square" data-family="source" />Source</span>
-        <span><i data-shape="circle" data-family="entity" />Entity</span>
-        <span><i data-shape="diamond" data-family="matter" />Matter</span>
-        <span><i data-shape="triangle" data-family="risk" />Risk</span>
-        <span><i data-shape="hexagon" data-family="action" />Action</span>
       </div>
       {size.width > 0 && size.height > 0 && (
         <ForceGraph2D<GraphNode, GraphLink>
@@ -211,23 +202,51 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
   )
 }
 
-function FilterMenu<T extends string>({
-  label: menuLabel,
-  options,
-  selected,
-  counts: optionCounts,
-  onToggle,
-  renderSymbol,
+function KeyMenu({
+  edgeCounts,
+  edges,
+  nodeCounts,
+  nodes,
+  onToggleEdge,
+  onToggleNode,
 }: {
-  label: string
-  options: readonly T[]
-  selected: ReadonlySet<T>
-  counts: Map<T, number>
-  onToggle: (option: T) => void
-  renderSymbol: (option: T) => ReactNode
+  edgeCounts: Map<EdgeFamily, number>
+  edges: ReadonlySet<EdgeFamily>
+  nodeCounts: Map<Family, number>
+  nodes: ReadonlySet<Family>
+  onToggleEdge: (family: EdgeFamily) => void
+  onToggleNode: (family: Family) => void
 }) {
-  const menu = useRef<HTMLDetailsElement>(null)
+  const menu = useDismissableMenu()
+  return (
+    <details className="filter-menu key-menu" ref={menu}>
+      <summary><LegendIcon /> Key <span>{nodes.size + edges.size}/{NODE_FAMILIES.length + EDGE_FAMILIES.length}</span></summary>
+      <div>
+        <strong>Nodes</strong>
+        {NODE_FAMILIES.map((family) => (
+          <label key={family}>
+            <input checked={nodes.has(family)} onChange={() => onToggleNode(family)} type="checkbox" />
+            <i aria-hidden="true" className="filter-node" data-family={family} data-shape={shapeByFamily[family]} />
+            <span>{family}</span>
+            <small>{nodeCounts.get(family) ?? 0}</small>
+          </label>
+        ))}
+        <strong>Edges</strong>
+        {EDGE_FAMILIES.map((family) => (
+          <label key={family}>
+            <input checked={edges.has(family)} onChange={() => onToggleEdge(family)} type="checkbox" />
+            <EdgeSymbol family={family} />
+            <span>{label(family)}</span>
+            <small>{edgeCounts.get(family) ?? 0}</small>
+          </label>
+        ))}
+      </div>
+    </details>
+  )
+}
 
+function useDismissableMenu() {
+  const menu = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
     const closeOutside = (event: PointerEvent) => {
       if (!menu.current?.contains(event.target as Node)) menu.current?.removeAttribute('open')
@@ -244,27 +263,7 @@ function FilterMenu<T extends string>({
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [])
-
-  return (
-    <details className="filter-menu" ref={menu}>
-      <summary>{menuLabel} <span>{selected.size}/{options.length}</span></summary>
-      <div>
-        {options.map((option) => (
-          <label key={option}>
-            <input type="checkbox" checked={selected.has(option)} onChange={() => onToggle(option)} />
-            {renderSymbol(option)}
-            <span>{label(option)}</span>
-            <small>{optionCounts.get(option) ?? 0}</small>
-          </label>
-        ))}
-      </div>
-    </details>
-  )
-}
-
-function NodeSymbol({ kind }: { kind: GraphNode['kind'] }) {
-  const family = familyByKind[kind]
-  return <i aria-hidden="true" className="filter-node" data-family={family} data-shape={shapeByFamily[family]} />
+  return menu
 }
 
 function EdgeSymbol({ family }: { family: EdgeFamily }) {
@@ -365,6 +364,10 @@ function label(value: string) {
 
 function EyeIcon({ crossed }: { crossed: boolean }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>{crossed && <path d="m4 4 16 16"/>}</svg>
+}
+
+function LegendIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="6" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="5" cy="18" r="1.5"/><path d="M9 6h10M9 12h10M9 18h10"/></svg>
 }
 
 function escapeHtml(value: string) {
