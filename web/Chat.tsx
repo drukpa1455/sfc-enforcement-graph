@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { compactChatHistory } from '../shared/chat'
+import Markdown from 'react-markdown'
+import { compactChatHistory, viewEventFromMessage } from '../shared/chat'
 import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from '../shared/graph'
-import { viewEventFromMessage } from '../shared/graph'
 
 interface Props {
   graph: GraphData
@@ -92,17 +92,9 @@ export function Chat({ graph, selected, selectedLink, headerAction, view, viewRe
 }
 
 function MessagePart({ graph, part }: { graph: GraphData; part: ChatPart }) {
-  if (part.type === 'text') return <span>{boldText(part.text ?? '')}</span>
+  if (part.type === 'text') return <Markdown>{part.text ?? ''}</Markdown>
   const activity = toolActivity(graph, part)
   return activity ? <span className="tool-activity">{activity}</span> : null
-}
-
-function boldText(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
-    part.startsWith('**') && part.endsWith('**')
-      ? <strong key={index}>{part.slice(2, -2)}</strong>
-      : part,
-  )
 }
 
 interface ChatPart {

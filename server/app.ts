@@ -1,5 +1,5 @@
 import { openai } from '@ai-sdk/openai'
-import { createAgentUIStreamResponse, isStepCount, tool, ToolLoopAgent } from 'ai'
+import { createAgentUIStreamResponse, isStepCount, safeValidateUIMessages, tool, ToolLoopAgent, type InferAgentUIMessage } from 'ai'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
@@ -128,6 +128,11 @@ app.post('/api/chat', bodyLimit({
   }
   const request = chatRequestSchema.safeParse(body)
   if (!request.success) return context.json({ error: 'invalid chat request' }, 400)
+  const messages = await safeValidateUIMessages<InferAgentUIMessage<typeof agent>>({
+    messages: request.data.messages,
+    tools: agent.tools,
+  })
+  if (!messages.success) return context.json({ error: 'invalid chat request' }, 400)
   const admission = requests.take()
   if (!admission.allowed) {
     context.header('Retry-After', String(admission.retryAfter))
@@ -136,7 +141,7 @@ app.post('/api/chat', bodyLimit({
 
   return createAgentUIStreamResponse({
     agent,
-    uiMessages: request.data.messages,
+    uiMessages: messages.data,
     options: request.data.context,
     abortSignal: context.req.raw.signal,
     timeout: { totalMs: 30_000 },

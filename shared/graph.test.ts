@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
 import { analyzeGraph } from './analytics.js'
-import { communityGraph, componentGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { communityGraph, componentGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath } from './graph.js'
 
 const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
@@ -121,26 +121,6 @@ test('analytics excludes releases and authority hubs', () => {
     [authority, release].map((node) => [node.metrics.degree, node.metrics.pagerank, node.metrics.component, node.metrics.community]),
     [[0, 0, null, null], [0, 0, null, null]],
   )
-})
-
-test('tool output becomes an explicit graph view', () => {
-  assert.deepEqual(viewFromParts([
-    { type: 'tool-search', state: 'output-available', output: {
-      view: { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] },
-    } },
-  ]), { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] })
-})
-
-test('only the latest assistant message can change the graph view', () => {
-  const assistant = {
-    id: 'assistant-1', role: 'assistant', parts: [{
-      type: 'tool-search', toolCallId: 'call-1', state: 'output-available', output: {
-        view: { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] },
-      },
-    }],
-  }
-  assert.equal(viewEventFromMessage(assistant)?.key, 'call-1')
-  assert.equal(viewEventFromMessage({ ...assistant, id: 'user-2', role: 'user' }), undefined)
 })
 
 test('graph context keeps only canonical selections', () => {
