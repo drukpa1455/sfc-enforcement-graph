@@ -4,7 +4,13 @@ from types import SimpleNamespace
 import pytest
 from pydantic_ai.usage import RunUsage
 
-from qf_sfc.extract import ExtractError, extract_releases, extract_text, validate_evidence
+from qf_sfc.extract import (
+    ExtractError,
+    extract_releases,
+    extract_text,
+    repair_evidence_case,
+    validate_evidence,
+)
 from qf_sfc.models import ReleaseExtraction
 from qf_sfc.store import Database
 
@@ -45,6 +51,12 @@ def test_rejects_non_source_evidence() -> None:
 
 def test_accepts_title_evidence() -> None:
     validate_evidence(extraction("Sample title"), "Sample title\nExample Limited")
+
+
+def test_repairs_unique_evidence_casing() -> None:
+    repaired = repair_evidence_case(extraction("example limited"), "Example Limited")
+
+    assert repaired.mentions[0].evidence.quote == "Example Limited"
 
 
 def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
