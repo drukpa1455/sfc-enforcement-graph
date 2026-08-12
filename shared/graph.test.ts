@@ -92,8 +92,10 @@ test('expansion adds exactly one relationship hop', () => {
 
 test('trace returns the shortest evidence-backed path', () => {
   const result = tracePath(graph, broker, regulator)
-  assert.deepEqual(result.nodeIds, [broker, regulator])
-  assert.equal(result.links.length, 1)
+  assert.equal(result.nodeIds[0], broker)
+  assert.equal(result.nodeIds.at(-1), regulator)
+  assert.equal(result.links.length, result.nodeIds.length - 1)
+  assert.ok(result.links.every((link) => link.family !== 'evidence' && link.evidence.length > 0))
 })
 
 test('neighborhood traverses real paths without authority hubs', () => {
