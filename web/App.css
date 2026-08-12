@@ -54,7 +54,8 @@ h1 {
 }
 
 .meta button,
-.graph-tools button {
+.graph-tools button,
+.graph-tools summary {
   align-items: center;
   background: transparent;
   border: 1px solid var(--line);
@@ -71,6 +72,7 @@ h1 {
 
 .meta button:hover,
 .graph-tools button:hover,
+.graph-tools summary:hover,
 .graph-tools button[aria-pressed='true'] {
   background: var(--element-hover);
   border-color: var(--line-strong);
@@ -88,16 +90,55 @@ h1 {
 }
 
 .graph-tools {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.4rem;
   left: 0.75rem;
   position: absolute;
   top: 0.75rem;
   z-index: 2;
 }
 
-.graph-tools button {
+.graph-tools button,
+.graph-tools summary {
   backdrop-filter: blur(8px);
   background: color-mix(in srgb, var(--background) 88%, transparent);
 }
+
+.graph-tools details { position: relative; }
+.graph-tools summary { list-style: none; }
+.graph-tools summary::-webkit-details-marker { display: none; }
+.graph-tools summary span { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.58rem; }
+.filter-menu > div {
+  background: color-mix(in srgb, var(--background) 96%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  box-shadow: 0 0.5rem 1.5rem #0002;
+  display: grid;
+  left: 0;
+  max-height: min(26rem, calc(100svh - 8rem));
+  min-width: 12rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  position: absolute;
+  top: 2.15rem;
+}
+.filter-menu label {
+  align-items: center;
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  font-size: 0.68rem;
+  gap: 0.45rem;
+  grid-template-columns: auto 1fr auto;
+  padding: 0.35rem 0.4rem;
+  text-transform: capitalize;
+}
+.filter-menu label:hover { background: var(--element-hover); }
+.filter-menu input { accent-color: var(--accent); margin: 0; }
+.filter-menu small { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.graph-empty { color: var(--muted); inset: 50% auto auto 50%; margin: 0; position: absolute; transform: translate(-50%, -50%); }
 
 .legend {
   align-items: center;
