@@ -11,6 +11,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedLink, setSelectedLink] = useState<GraphLink>()
   const [focusIds, setFocusIds] = useState<string[]>()
+  const [showFullGraph, setShowFullGraph] = useState(false)
   const [viewReset, setViewReset] = useState(0)
   const [viewVersion, setViewVersion] = useState(0)
   const [error, setError] = useState<string>()
@@ -40,8 +41,8 @@ export default function App() {
 
   const selected = graph?.nodes.filter((node) => selectedIds.includes(node.id)) ?? []
   const visibleGraph = useMemo(
-    () => graph && (focusIds ? focusGraph(graph, focusIds) : overviewGraph(graph)),
-    [focusIds, graph],
+    () => graph && (focusIds ? focusGraph(graph, focusIds) : showFullGraph ? graph : overviewGraph(graph)),
+    [focusIds, graph, showFullGraph],
   )
   const showView = useCallback((view: GraphView) => {
     setSelectedLink(undefined)
@@ -51,6 +52,14 @@ export default function App() {
   }, [])
   const showAll = useCallback(() => {
     setFocusIds(undefined)
+    setShowFullGraph(true)
+    setSelectedIds([])
+    setSelectedLink(undefined)
+    setViewReset((version) => version + 1)
+    setViewVersion((version) => version + 1)
+  }, [])
+  const showOverview = useCallback(() => {
+    setShowFullGraph(false)
     setSelectedIds([])
     setSelectedLink(undefined)
     setViewReset((version) => version + 1)
@@ -76,8 +85,12 @@ export default function App() {
           <div className="meta">
             <p>{focusIds
               ? `${visibleGraph.nodes.length} of ${graph.nodes.length} nodes · ${visibleGraph.links.length} links`
-              : `${visibleGraph.nodes.length} overview · ${graph.nodes.length} total · ${visibleGraph.links.length} links`}</p>
-            {focusIds && <button className="text-button" onClick={showAll}>Show all</button>}
+              : showFullGraph
+                ? `${graph.nodes.length} nodes · ${graph.links.length} links`
+                : `${visibleGraph.nodes.length} overview · ${graph.nodes.length} total · ${visibleGraph.links.length} links`}</p>
+            {showFullGraph && !focusIds
+              ? <button className="text-button" onClick={showOverview}>Overview</button>
+              : <button className="text-button" onClick={showAll}>Show all</button>}
             <button
               aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} theme`}
               className="icon-button"
