@@ -68,6 +68,15 @@ npm run dev
 Vite serves the UI at `http://localhost:5173` and proxies `/api` to Hono on port
 `8787`.
 
+## Deploy
+
+Railway reads `railway.json`, builds the Vite client, starts the Hono server, and
+checks `/api/health`. Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL`.
+
+Chat accepts at most 12 requests per minute per server process. Override that
+single-instance budget with `CHAT_REQUESTS_PER_MINUTE`, and set a hard monthly
+spend limit with the model provider before making the service public.
+
 ## Verify
 
 ```sh

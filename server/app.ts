@@ -1,9 +1,11 @@
 import { openai } from '@ai-sdk/openai'
 import { createAgentUIStreamResponse, isStepCount, tool, ToolLoopAgent } from 'ai'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
 import graphJson from '../data/graph.json' with { type: 'json' }
 import { describeGraphContext, expandNodes, graphContextSchema, graphSchema, inspectNode, searchGraph, tracePath } from '../shared/graph.js'
+import { CHAT_BODY_LIMIT, CHAT_MESSAGE_LIMIT, chatRequestBudget } from './guardrails.js'
 
 const graph = graphSchema.parse(graphJson)
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
@@ -16,6 +18,7 @@ If the graph does not support an answer, say so. Keep answers concise.`
 
 export const agent = new ToolLoopAgent({
   model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.6'),
+  maxOutputTokens: 1_200,
   stopWhen: isStepCount(6),
   instructions,
   callOptionsSchema: graphContextSchema,
@@ -51,12 +54,27 @@ export const agent = new ToolLoopAgent({
 })
 
 const app = new Hono()
+const requests = chatRequestBudget()
 
+app.get('/api/health', (context) => context.json({ status: 'ok' }))
 app.get('/api/graph', (context) => context.json(graph))
-app.post('/api/chat', async (context) => {
-  const body: unknown = await context.req.json()
+app.post('/api/chat', bodyLimit({
+  maxSize: CHAT_BODY_LIMIT,
+  onError: (context) => context.json({ error: 'chat request is too large' }, 413),
+}), async (context) => {
+  let body: unknown
+  try {
+    body = await context.req.json()
+  } catch {
+    return context.json({ error: 'invalid chat request' }, 400)
+  }
   const request = chatRequestSchema.safeParse(body)
   if (!request.success) return context.json({ error: 'invalid chat request' }, 400)
+  const admission = requests.take()
+  if (!admission.allowed) {
+    context.header('Retry-After', String(admission.retryAfter))
+    return context.json({ error: 'chat request limit reached' }, 429)
+  }
 
   return createAgentUIStreamResponse({
     agent,
@@ -74,6 +92,6 @@ function withFocus<T extends { nodeIds: string[] }>(result: T, selectedNodeIds: 
 }
 
 const chatRequestSchema = z.object({
-  messages: z.array(z.unknown()),
+  messages: z.array(z.unknown()).min(1).max(CHAT_MESSAGE_LIMIT),
   context: graphContextSchema.default({ selectedNodeIds: [], view: { mode: 'all' } }),
 })
