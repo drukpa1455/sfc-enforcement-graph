@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewFromParts } from './graph.js'
+import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = 'mention:26PR119:mention_3'
@@ -49,18 +49,36 @@ test('tool output becomes an explicit graph view', () => {
   ]), { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] })
 })
 
+test('only the latest assistant message can change the graph view', () => {
+  const assistant = {
+    id: 'assistant-1', role: 'assistant', parts: [{
+      type: 'tool-search', toolCallId: 'call-1', state: 'output-available', output: {
+        view: { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] },
+      },
+    }],
+  }
+  assert.equal(viewEventFromMessage(assistant)?.key, 'call-1')
+  assert.equal(viewEventFromMessage({ ...assistant, id: 'user-2', role: 'user' }), undefined)
+})
+
 test('graph context keeps only canonical selections', () => {
   const link = graph.links.find((candidate) => candidate.source === broker && candidate.target === action)
   assert.ok(link)
   const context = normalizeGraphContext(graph, {
     selectedNodeIds: [broker, 'unknown', broker],
-    visibleNodeIds: [broker, action, 'unknown'],
+    view: { mode: 'focus', nodeIds: [broker, action, 'unknown'] },
     selectedLink: { source: link.source, target: link.target, kind: link.kind },
   })
   assert.deepEqual(context.selectedNodeIds, [broker])
-  assert.deepEqual(context.visibleNodeIds, [broker, action])
+  assert.deepEqual(context.view, { mode: 'focus', nodeIds: [broker, action] })
   assert.equal(context.selectedLink?.kind, link.kind)
   assert.match(describeGraphContext(graph, context), /Futu/)
+})
+
+test('complete view context does not pretend a truncated sample is visible', () => {
+  const context = normalizeGraphContext(graph, { selectedNodeIds: [], view: { mode: 'all' } })
+  assert.deepEqual(context.view, { mode: 'all' })
+  assert.match(describeGraphContext(graph, context), new RegExp(`all ${graph.nodes.length} nodes`))
 })
 
 test('release links reject executable URL schemes', () => {

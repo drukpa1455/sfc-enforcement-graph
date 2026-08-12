@@ -28,7 +28,10 @@ export const releaseSchema = z.object({
 
 export const graphContextSchema = z.object({
   selectedNodeIds: z.array(z.string().min(1)).max(24),
-  visibleNodeIds: z.array(z.string().min(1)).max(80),
+  view: z.discriminatedUnion('mode', [
+    z.object({ mode: z.literal('all') }),
+    z.object({ mode: z.literal('focus'), nodeIds: z.array(z.string().min(1)).max(80) }),
+  ]),
   selectedLink: z.object({
     source: z.string().min(1),
     target: z.string().min(1),
@@ -61,13 +64,15 @@ export type GraphContext = z.infer<typeof graphContextSchema>
 export function normalizeGraphContext(graph: GraphData, context: GraphContext): GraphContext {
   const known = new Set(graph.nodes.map((node) => node.id))
   const selectedNodeIds = uniqueKnown(context.selectedNodeIds, known)
-  const visibleNodeIds = uniqueKnown(context.visibleNodeIds, known)
+  const view = context.view.mode === 'focus'
+    ? { mode: 'focus' as const, nodeIds: uniqueKnown(context.view.nodeIds, known) }
+    : context.view
   const selectedLink = context.selectedLink && graph.links.some((link) =>
     link.source === context.selectedLink?.source &&
     link.target === context.selectedLink.target &&
     link.kind === context.selectedLink.kind,
   ) ? context.selectedLink : undefined
-  return { selectedNodeIds, visibleNodeIds, selectedLink }
+  return { selectedNodeIds, view, selectedLink }
 }
 
 export function describeGraphContext(graph: GraphData, input: GraphContext) {
@@ -82,7 +87,9 @@ export function describeGraphContext(graph: GraphData, input: GraphContext) {
     const { source, target, kind } = context.selectedLink
     lines.push(`- selected relationship: ${nodes.get(source)} [${source}] -${kind}-> ${nodes.get(target)} [${target}]`)
   }
-  lines.push(`- visible node IDs: ${context.visibleNodeIds.join(', ') || 'none'}`)
+  lines.push(context.view.mode === 'all'
+    ? `- view: all ${graph.nodes.length} nodes`
+    : `- focused node IDs: ${context.view.nodeIds.join(', ') || 'none'}`)
   return lines.join('\n')
 }
 
@@ -203,8 +210,14 @@ function addNeighbor(
   neighbors.set(sourceId, list)
 }
 
-export function viewFromParts(parts: Array<{ type: string; state?: string; output?: unknown }>): GraphView | undefined {
-  for (const part of [...parts].reverse()) {
+export function viewEventFromMessage(message: {
+  id: string
+  role: string
+  parts: Array<{ type: string; state?: string; output?: unknown; toolCallId?: string }>
+}): { key: string; view: GraphView } | undefined {
+  if (message.role !== 'assistant') return undefined
+  for (let index = message.parts.length - 1; index >= 0; index -= 1) {
+    const part = message.parts[index]
     if (part.state !== 'output-available' || !part.output || typeof part.output !== 'object') continue
     const view = Reflect.get(part.output, 'view')
     if (!view || typeof view !== 'object' || Reflect.get(view, 'mode') !== 'focus') continue
@@ -214,8 +227,15 @@ export function viewFromParts(parts: Array<{ type: string; state?: string; outpu
       Array.isArray(nodeIds) && nodeIds.length && nodeIds.every((id) => typeof id === 'string') &&
       Array.isArray(selectedNodeIds) && selectedNodeIds.every((id) => typeof id === 'string')
     ) {
-      return { mode: 'focus', nodeIds, selectedNodeIds }
+      return {
+        key: part.toolCallId ?? `${message.id}:${index}`,
+        view: { mode: 'focus', nodeIds, selectedNodeIds },
+      }
     }
   }
   return undefined
+}
+
+export function viewFromParts(parts: Array<{ type: string; state?: string; output?: unknown }>): GraphView | undefined {
+  return viewEventFromMessage({ id: 'message', role: 'assistant', parts })?.view
 }
