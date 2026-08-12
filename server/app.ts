@@ -4,12 +4,14 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
 import graphJson from '../data/graph.json' with { type: 'json' }
+import { analyzeGraph } from '../shared/analytics.js'
 import {
+  communityGraph,
   describeGraphContext,
   expandNodes,
   GRAPH_METRICS,
   graphContextSchema,
-  graphSchema,
+  sourceGraphSchema,
   inspectNode,
   neighborhood,
   NODE_KINDS,
@@ -19,13 +21,13 @@ import {
 } from '../shared/graph.js'
 import { CHAT_BODY_LIMIT, CHAT_MESSAGE_LIMIT, chatRequestBudget } from './guardrails.js'
 
-const graph = graphSchema.parse(graphJson)
+const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
 Use search before discussing an entity unless its graph ID is already selected in the current UI context. Use inspect for relationships and evidence.
 When the user says this, these, here, or the current view, use the supplied UI context.
 Tool results focus the visible graph. For requests to show or isolate a subject, search it and inspect the relevant result.
 Use expand to add one relationship hop to known node IDs. Use trace to connect two known node IDs.
-Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, or bridging nodes.
+Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, bridging, or densely embedded nodes. Use community to inspect a node's algorithmic cluster.
 Graph proximity is not evidence of misconduct. Describe every path through its explicit relationships and preserve each claim or action status.
 Distinguish allegations, findings, convictions, and sought actions. Cite release references.
 If the graph does not support an answer, say so. Keep answers concise.`
@@ -69,8 +71,16 @@ export const agent = new ToolLoopAgent({
       execute: ({ nodeIds, depth, includeHubs }) =>
         withFocus(neighborhood(graph, nodeIds, depth, 80, includeHubs), nodeIds),
     }),
+    community: tool({
+      description: "Show the highest-PageRank members of a node's Louvain community. Community membership is a structural clue, not evidence.",
+      inputSchema: z.object({ id: z.string().min(1) }),
+      execute: ({ id }) => {
+        const result = communityGraph(graph, id)
+        return withFocus(result, [id])
+      },
+    }),
     rank: tool({
-      description: 'Rank graph nodes by recurrence, direct degree, PageRank, or sampled bridge centrality.',
+      description: 'Rank graph nodes by recurrence, degree, PageRank, exact betweenness, or k-core.',
       inputSchema: z.object({
         metric: z.enum(GRAPH_METRICS),
         kinds: z.array(z.enum(NODE_KINDS)).max(NODE_KINDS.length).optional(),

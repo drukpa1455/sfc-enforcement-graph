@@ -203,7 +203,11 @@ function metricFacts(node: GraphNode): Array<[string, string]> {
   const metrics: Array<[string, number]> = [
     ['release count', node.metrics.releaseCount],
     ['degree', node.metrics.degree],
-    ['bridge', node.metrics.bridge],
+    ['component size', node.metrics.componentSize],
+    ['core', node.metrics.core],
+    ['betweenness', node.metrics.betweenness],
   ]
-  return metrics.filter(([, value]) => value > 0).map(([name, value]) => [name, String(value)])
+  const facts = metrics.filter(([, value]) => value > 0).map(([name, value]) => [name, String(value)] as [string, string])
+  if (node.metrics.community !== null) facts.push(['community', String(node.metrics.community)])
+  return facts
 }

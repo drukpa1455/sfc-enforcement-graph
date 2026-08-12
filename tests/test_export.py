@@ -59,7 +59,6 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     assert person["facets"] == {"identity": ["exact_name"], "involvement": ["subject"]}
     assert {item["name"] for item in person["facts"]} == {"description", "alias", "age"}
     assert action["facets"] == {"action_family": ["penalty"], "action_status": ["imposed"]}
-    assert action["metrics"]["degree"] > 0
     assert relationship["family"] == "relationship"
     assert relationship["facets"]["relationship_kind"] == ["affiliation"]
 
