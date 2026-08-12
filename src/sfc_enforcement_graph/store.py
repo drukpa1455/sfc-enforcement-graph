@@ -167,6 +167,23 @@ class Database:
         ).fetchone()
         return row is not None
 
+    def extraction_failure_is_current(
+        self, raw: dict[str, Any], extraction_version: int, model: str
+    ) -> bool:
+        row = self.connection.execute(
+            """SELECT 1 FROM extraction_failures
+            WHERE source_ref = ? AND language = ? AND source_modification_time = ?
+              AND schema_version = ? AND model = ?""",
+            (
+                raw["newsRefNo"],
+                raw["lang"].upper(),
+                raw["modificationTime"],
+                extraction_version,
+                model,
+            ),
+        ).fetchone()
+        return row is not None
+
     def save_extraction(
         self,
         raw: dict[str, Any],
