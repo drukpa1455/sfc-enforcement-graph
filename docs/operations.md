@@ -23,11 +23,14 @@ serialized. Each release permits at most one provider request and no transport
 retry; failed releases remain stale for deliberate replay. Use `--ref REFERENCE`
 for a specific release.
 
+Failed attempts record their exception chain and available usage in
+`extraction_failures`. A later successful extraction clears the matching failure.
+
 ## Source and repair semantics
 
 | Artifact | Role | Repair |
 |---|---|---|
-| `data/sfc.sqlite3` | Canonical raw releases, extractions, versions, and sync state | Re-sync changed sources; re-extract stale outputs |
+| `data/sfc.sqlite3` | Canonical raw releases, extractions, failures, versions, and sync state | Re-sync changed sources; re-extract stale outputs |
 | `data/graph.json` | Replaceable application and API projection | Run `sfc-graph-export` |
 | `public/docs/` | Ignored generated documentation | Run `npm run docs` |
 | `dist/` | Ignored production application | Run `npm run build` |
