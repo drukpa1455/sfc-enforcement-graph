@@ -1,18 +1,9 @@
 from pathlib import Path
 
-from sfc_enforcement_graph.export import action_family, export_graph
+from sfc_enforcement_graph.export import export_graph
 from sfc_enforcement_graph.models import EXTRACTION_VERSION
 from sfc_enforcement_graph.store import Database
 from test_models import extraction
-
-
-def test_groups_action_types_without_erasing_them() -> None:
-    assert action_family("compensation_order") == "remedy"
-    assert action_family("licence_suspension") == "penalty"
-    assert action_family("interim_injunction") == "protective"
-    assert action_family("hearing_adjournment") == "procedural"
-    assert action_family("commence_civil_proceedings") == "proceeding"
-    assert action_family("costs_order") == "other"
 
 
 def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
@@ -58,7 +49,15 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     relationship = next(link for link in graph["links"] if link["kind"] == "regulated_by")
     assert person["facets"] == {"identity": ["exact_name"], "involvement": ["subject"]}
     assert {item["name"] for item in person["facts"]} == {"description", "alias", "age"}
-    assert action["facets"] == {"action_family": ["penalty"], "action_status": ["imposed"]}
+    assert action["label"] == "Nine-month licence suspension"
+    assert action["facets"] == {
+        "action_family": ["sanction"],
+        "action_type": ["suspension"],
+        "action_status": ["imposed"],
+    }
+    risk = next(node for node in graph["nodes"] if node["kind"] == "risk")
+    assert risk["label"] == "Written authorization failure"
+    assert risk["facets"]["risk_type"] == ["systems_controls_failure"]
     assert relationship["family"] == "relationship"
     assert relationship["facets"]["relationship_kind"] == ["affiliation"]
 

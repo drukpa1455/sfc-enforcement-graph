@@ -26,17 +26,6 @@ SOURCE_URL = "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcem
 DEFAULT_MODEL = "gpt-5.6-sol"
 MERGED_ENTITY_KINDS = {"person", "organization", "fund", "instrument"}
 
-ACTION_FAMILIES = {
-    "remedy": ("compensation", "disgorg", "restitut", "repay", "restore", "damages", "recovery"),
-    "penalty": (
-        "fine", "reprimand", "suspension", "ban", "prohibition", "disqualif", "revocation",
-        "cancellation", "imprison", "sentence", "conviction", "community_service", "censure",
-    ),
-    "protective": ("restriction", "freeze", "injunction", "restraint", "seiz", "warrant", "receiver"),
-    "procedural": ("bail", "remand", "adjourn", "withdraw", "stay", "hearing", "trial", "plea", "release"),
-    "proceeding": ("proceed", "prosecut", "charge", "investigat", "appeal", "review", "application", "petition"),
-}
-
 
 def export_graph(
     database: Database, model: str = DEFAULT_MODEL, language: str = "EN"
@@ -166,12 +155,13 @@ def project_release(
             nodes,
             node(
                 risk_id,
-                label(risk.category),
+                risk.label,
                 "risk",
                 risk.description,
                 ref,
                 {
-                    "risk_family": [risk.family],
+                    "risk_family": [risk.type.family.value],
+                    "risk_type": [risk.type.value],
                     "claim_status": [risk.status.value],
                     "negated": [str(risk.negated).lower()],
                 },
@@ -195,11 +185,15 @@ def project_release(
             nodes,
             node(
                 action_id,
-                label(action.type),
+                action.label,
                 "action",
                 action.description,
                 ref,
-                {"action_family": [action_family(action.type)], "action_status": [action.status.value]},
+                {
+                    "action_family": [action.type.family.value],
+                    "action_type": [action.type.value],
+                    "action_status": [action.status.value],
+                },
                 action_facts(action, ref),
             ),
         )
@@ -237,13 +231,6 @@ def entity_id(kind: str, name: str, ref: str, local_id: str) -> str:
 def normalize_name(name: str) -> str:
     normalized = unicodedata.normalize("NFKC", name).casefold()
     return re.sub(r"\s+", " ", normalized).strip()
-
-
-def action_family(action_type: str) -> str:
-    for family, markers in ACTION_FAMILIES.items():
-        if any(marker in action_type for marker in markers):
-            return family
-    return "other"
 
 
 def add_node(nodes: dict[str, dict[str, Any]], candidate: dict[str, Any]) -> None:

@@ -15,7 +15,7 @@ ActionId = Annotated[str, StringConstraints(pattern=r"^action_[1-9][0-9]*$")]
 Term = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
 Currency = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
 # Bump whenever the extraction schema or instructions change.
-EXTRACTION_VERSION = 9
+EXTRACTION_VERSION = 10
 
 
 class Model(BaseModel):
@@ -27,8 +27,11 @@ class ClaimStatus(StrEnum):
     SUSPECTED = "suspected"
     ALLEGED = "alleged"
     CONSIDERED = "considered"
+    ADMITTED = "admitted"
     FOUND = "found"
     CONVICTED = "convicted"
+    ACQUITTED = "acquitted"
+    DISMISSED = "dismissed"
     ORDERED = "ordered"
 
 
@@ -38,14 +41,141 @@ class ActionStatus(StrEnum):
     COMMENCED = "commenced"
     ISSUED = "issued"
     GRANTED = "granted"
+    DENIED = "denied"
+    DISMISSED = "dismissed"
     IMPOSED = "imposed"
     ORDERED = "ordered"
     AGREED = "agreed"
+    UPHELD = "upheld"
+    VARIED = "varied"
     PENDING = "pending"
     ADJOURNED = "adjourned"
     WITHDRAWN = "withdrawn"
     REVOKED = "revoked"
+    LIFTED = "lifted"
     COMPLETED = "completed"
+
+
+class RiskFamily(StrEnum):
+    MARKET_MISCONDUCT = "market_misconduct"
+    FRAUD_DISHONESTY = "fraud_dishonesty"
+    FINANCIAL_CRIME = "financial_crime"
+    LICENSING_FITNESS = "licensing_fitness"
+    CLIENT_PROTECTION = "client_protection"
+    SYSTEMS_CONTROLS = "systems_controls"
+    GOVERNANCE_OVERSIGHT = "governance_oversight"
+    DISCLOSURE_REPORTING = "disclosure_reporting"
+    CYBERSECURITY = "cybersecurity"
+    LEGAL_PROCESS = "legal_process"
+    OTHER = "other"
+
+
+class ActionFamily(StrEnum):
+    INVESTIGATIVE = "investigative"
+    PROCEEDING = "proceeding"
+    PROCEDURAL = "procedural"
+    DECISION = "decision"
+    PROTECTIVE = "protective"
+    REMEDIAL = "remedial"
+    SANCTION = "sanction"
+    ADMINISTRATIVE = "administrative"
+    OTHER = "other"
+
+
+class _ClassifiedType(StrEnum):
+    """Canonical extraction type whose graph family is a deterministic projection."""
+
+    family: RiskFamily | ActionFamily
+
+    def __new__(cls, value: str, family: RiskFamily | ActionFamily) -> Self:
+        member = str.__new__(cls, value)
+        member._value_ = value
+        member.family = family
+        return member
+
+
+class RiskType(_ClassifiedType):
+    INSIDER_DEALING = "insider_dealing", RiskFamily.MARKET_MISCONDUCT
+    MARKET_MANIPULATION = "market_manipulation", RiskFamily.MARKET_MISCONDUCT
+    FALSE_TRADING = "false_trading", RiskFamily.MARKET_MISCONDUCT
+    IMPROPER_TRADING = "improper_trading", RiskFamily.MARKET_MISCONDUCT
+    DISCLOSURE_MISCONDUCT = "disclosure_misconduct", RiskFamily.DISCLOSURE_REPORTING
+    FRAUD = "fraud", RiskFamily.FRAUD_DISHONESTY
+    DECEPTION = "deception", RiskFamily.FRAUD_DISHONESTY
+    MISAPPROPRIATION = "misappropriation", RiskFamily.FRAUD_DISHONESTY
+    BRIBERY_CORRUPTION = "bribery_corruption", RiskFamily.FINANCIAL_CRIME
+    MONEY_LAUNDERING = "money_laundering", RiskFamily.FINANCIAL_CRIME
+    AML_FAILURE = "aml_failure", RiskFamily.FINANCIAL_CRIME
+    UNLICENSED_ACTIVITY = "unlicensed_activity", RiskFamily.LICENSING_FITNESS
+    FITNESS_PROPRIETY = "fitness_propriety", RiskFamily.LICENSING_FITNESS
+    PROFESSIONAL_MISCONDUCT = "professional_misconduct", RiskFamily.LICENSING_FITNESS
+    CLIENT_SUITABILITY = "client_suitability", RiskFamily.CLIENT_PROTECTION
+    CLIENT_ASSET_FAILURE = "client_asset_failure", RiskFamily.CLIENT_PROTECTION
+    CLIENT_INVESTOR_HARM = "client_investor_harm", RiskFamily.CLIENT_PROTECTION
+    CONFLICT_OF_INTEREST = "conflict_of_interest", RiskFamily.GOVERNANCE_OVERSIGHT
+    SYSTEMS_CONTROLS_FAILURE = "systems_controls_failure", RiskFamily.SYSTEMS_CONTROLS
+    RISK_MANAGEMENT_FAILURE = "risk_management_failure", RiskFamily.SYSTEMS_CONTROLS
+    SUPERVISION_FAILURE = "supervision_failure", RiskFamily.GOVERNANCE_OVERSIGHT
+    DIRECTOR_DUTY_BREACH = "director_duty_breach", RiskFamily.GOVERNANCE_OVERSIGHT
+    REPORTING_FAILURE = "reporting_failure", RiskFamily.DISCLOSURE_REPORTING
+    FALSE_MISLEADING_INFORMATION = "false_misleading_information", RiskFamily.DISCLOSURE_REPORTING
+    REGULATOR_NONCOOPERATION = "regulator_noncooperation", RiskFamily.LEGAL_PROCESS
+    CYBERSECURITY_FAILURE = "cybersecurity_failure", RiskFamily.CYBERSECURITY
+    LEGAL_NONCOMPLIANCE = "legal_noncompliance", RiskFamily.LEGAL_PROCESS
+    OTHER = "other", RiskFamily.OTHER
+
+
+class ActionType(_ClassifiedType):
+    INVESTIGATION = "investigation", ActionFamily.INVESTIGATIVE
+    INFORMATION_NOTICE = "information_notice", ActionFamily.INVESTIGATIVE
+    INSPECTION_SEARCH = "inspection_search", ActionFamily.INVESTIGATIVE
+    ARREST = "arrest", ActionFamily.INVESTIGATIVE
+    ARREST_WARRANT = "arrest_warrant", ActionFamily.INVESTIGATIVE
+    CHARGE = "charge", ActionFamily.PROCEEDING
+    PROSECUTION = "prosecution", ActionFamily.PROCEEDING
+    PROCEEDING_COMMENCED = "proceeding_commenced", ActionFamily.PROCEEDING
+    HEARING = "hearing", ActionFamily.PROCEDURAL
+    TRIAL = "trial", ActionFamily.PROCEDURAL
+    ADJOURNMENT = "adjournment", ActionFamily.PROCEDURAL
+    BAIL = "bail", ActionFamily.PROCEDURAL
+    REMAND = "remand", ActionFamily.PROCEDURAL
+    APPEAL_REVIEW = "appeal_review", ActionFamily.PROCEDURAL
+    PROCEDURAL_ORDER = "procedural_order", ActionFamily.PROCEDURAL
+    FINDING = "finding", ActionFamily.DECISION
+    CONVICTION = "conviction", ActionFamily.DECISION
+    PLEA = "plea", ActionFamily.DECISION
+    SETTLEMENT = "settlement", ActionFamily.DECISION
+    FINE = "fine", ActionFamily.SANCTION
+    REPRIMAND = "reprimand", ActionFamily.SANCTION
+    SUSPENSION = "suspension", ActionFamily.SANCTION
+    REVOCATION = "revocation", ActionFamily.SANCTION
+    PROHIBITION = "prohibition", ActionFamily.SANCTION
+    DISQUALIFICATION = "disqualification", ActionFamily.SANCTION
+    IMPRISONMENT = "imprisonment", ActionFamily.SANCTION
+    COMMUNITY_SERVICE = "community_service", ActionFamily.SANCTION
+    COSTS = "costs", ActionFamily.ADMINISTRATIVE
+    COMPENSATION = "compensation", ActionFamily.REMEDIAL
+    DISGORGEMENT_RESTORATION = "disgorgement_restoration", ActionFamily.REMEDIAL
+    INJUNCTION_ASSET_FREEZE = "injunction_asset_freeze", ActionFamily.PROTECTIVE
+    RESTRICTION_NOTICE = "restriction_notice", ActionFamily.PROTECTIVE
+    TRADING_SUSPENSION = "trading_suspension", ActionFamily.PROTECTIVE
+    LISTING_CANCELLATION = "listing_cancellation", ActionFamily.ADMINISTRATIVE
+    REMEDIATION_GOVERNANCE = "remediation_governance", ActionFamily.ADMINISTRATIVE
+    WINDING_UP_DISSOLUTION = "winding_up_dissolution", ActionFamily.ADMINISTRATIVE
+    OTHER = "other", ActionFamily.OTHER
+
+
+class GeographyRole(StrEnum):
+    INCORPORATED_IN = "incorporated_in"
+    RESIDENT_IN = "resident_in"
+    OPERATES_IN = "operates_in"
+    LISTED_IN = "listed_in"
+    REGULATED_IN = "regulated_in"
+    PROCEEDING_IN = "proceeding_in"
+    CONDUCT_IN = "conduct_in"
+    ASSETS_IN = "assets_in"
+    RESTRICTED_IN = "restricted_in"
+    OTHER = "other"
 
 
 class Evidence(Model):
@@ -63,7 +193,7 @@ class SourcedText(Model):
 class Attribute(Model):
     name: Term = Field(
         description=(
-            "Normalized attribute name for a useful fact not represented by a dedicated field, such as age, "
+            "Source-specific snake_case key for a useful fact not represented by a dedicated field, such as age, "
             "industry, job_title, stock_code, listing_board, ownership_percent, license_status, transaction_count, "
             "profit, loss, bail_condition, or legal_basis."
         )
@@ -74,10 +204,10 @@ class Attribute(Model):
 
 class Geography(Model):
     name: str = Field(min_length=1, description="Geographic name exactly as written.")
-    role: Term = Field(
+    role: GeographyRole = Field(
         description=(
-            "Relationship to the containing item, such as incorporated_in, operates_in, listed_in, resident_in, "
-            "regulated_in, proceeding_in, assets_in, or name_reference."
+            "Actual relationship to the containing item. Do not extract a geography merely because a place appears "
+            "inside an entity name."
         )
     )
     evidence: Evidence
@@ -130,7 +260,8 @@ class EntityMention(Model):
         min_length=1,
         description=(
             "Name exactly as written. For an unnamed party, retain the source's descriptive label. Each named "
-            "person or organization gets a separate mention."
+            "person or organization gets a separate mention. An issuer is an organization; its shares, bonds, "
+            "accounts, or other securities are financial instruments."
         ),
     )
     aliases: list[str] = Field(
@@ -185,7 +316,10 @@ class Relationship(Model):
     object_id: MentionId
     kind: Literal["affiliation", "ownership", "control", "family", "service", "instrument", "membership", "other"]
     predicate: Term = Field(
-        description="Specific normalized predicate, such as director_of, wife_of, accredited_to, or issuer_of."
+        description=(
+            "Concise source-specific predicate, such as director_of, wife_of, accredited_to, or issuer_of. "
+            "The controlled kind, not this predicate, is the stable query dimension."
+        )
     )
     period: Period | None = None
     status: ClaimStatus = ClaimStatus.REPORTED
@@ -200,18 +334,12 @@ class Risk(Model):
     authority_ids: list[MentionId] = Field(default_factory=list)
     subject_ids: list[MentionId] = Field(min_length=1)
     affected_ids: list[MentionId] = Field(default_factory=list)
-    family: Literal[
-        "market_abuse",
-        "fraud",
-        "reporting",
-        "governance",
-        "controls",
-        "financial_crime",
-        "cyber",
-        "professional_conduct",
-        "other",
-    ] = Field(description="Stable high-level risk family for graph queries.")
-    category: Term = Field(description="Specific normalized risk, such as insider_dealing or control_failure.")
+    type: RiskType = Field(description="Controlled risk type. Its stable graph family is derived deterministically.")
+    label: str = Field(
+        min_length=1,
+        max_length=120,
+        description="Concise source-grounded label preserving detail beyond the controlled type.",
+    )
     description: str = Field(min_length=1)
     status: ClaimStatus
     period: Period | None = None
@@ -227,7 +355,14 @@ class Action(Model):
     actor_ids: list[MentionId] = Field(default_factory=list)
     target_ids: list[MentionId] = Field(min_length=1)
     affected_ids: list[MentionId] = Field(default_factory=list)
-    type: Term = Field(description="Specific normalized action, such as fine, suspension, or compensation_order.")
+    type: ActionType = Field(
+        description="Controlled enforcement, judicial, or administrative action type. Its family is derived."
+    )
+    label: str = Field(
+        min_length=1,
+        max_length=120,
+        description="Concise source-grounded label preserving detail beyond the controlled type.",
+    )
     description: str = Field(min_length=1)
     status: ActionStatus
     amount: Money | None = None
