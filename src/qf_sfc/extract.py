@@ -97,9 +97,18 @@ def extract_release(
             "timeout": REQUEST_TIMEOUT_SECONDS,
         },
     )
-    extraction = result.output
+    extraction = repair_evidence_case(result.output, f"{title}\n{text}")
     validate_evidence(extraction, f"{title}\n{text}")
     return extraction, result
+
+
+def repair_evidence_case(extraction: ReleaseExtraction, source_text: str) -> ReleaseExtraction:
+    data = extraction.model_dump(mode="json")
+    for evidence in evidence_objects(data):
+        matches = list(re.finditer(re.escape(evidence["quote"]), source_text, re.IGNORECASE))
+        if len(matches) == 1:
+            evidence["quote"] = matches[0].group()
+    return ReleaseExtraction.model_validate(data)
 
 
 def validate_evidence(extraction: ReleaseExtraction, source_text: str) -> None:
@@ -118,6 +127,17 @@ def evidence_quotes(value: Any):
     elif isinstance(value, list):
         for child in value:
             yield from evidence_quotes(child)
+
+
+def evidence_objects(value: Any):
+    if isinstance(value, dict):
+        if set(value) == {"quote"} and isinstance(value["quote"], str):
+            yield value
+        for child in value.values():
+            yield from evidence_objects(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from evidence_objects(child)
 
 
 def extract_releases(
