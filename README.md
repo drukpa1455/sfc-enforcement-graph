@@ -110,3 +110,18 @@ The dataset derives from public [SFC enforcement
 news](https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/).
 The original release remains authoritative. This project is independent of the
 SFC and is not legal or investment advice.
+
+## License
+
+Copyright (C) 2026 drukpa1455.
+
+The original software and documentation in this repository are available
+under either:
+
+- the [GNU Affero General Public License, version 3 or later](LICENSE); or
+- a separate [commercial license](COMMERCIAL-LICENSE.md) for proprietary use.
+
+You may choose the AGPL without a commercial agreement if you comply with its
+terms. SFC source material, the derived dataset, and third-party dependencies
+are not relicensed by this project and remain subject to their respective
+rights and terms.
