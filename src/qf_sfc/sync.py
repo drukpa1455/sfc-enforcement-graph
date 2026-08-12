@@ -21,16 +21,16 @@ class SfcError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class PullResult:
-    considered: int = 0
-    downloaded: int = 0
+class SyncResult:
+    checked: int = 0
+    added: int = 0
     updated: int = 0
     unchanged: int = 0
 
-    def add(self, **changes: int) -> PullResult:
-        return PullResult(
-            considered=self.considered + changes.get("considered", 0),
-            downloaded=self.downloaded + changes.get("downloaded", 0),
+    def add(self, **changes: int) -> SyncResult:
+        return SyncResult(
+            checked=self.checked + changes.get("checked", 0),
+            added=self.added + changes.get("added", 0),
             updated=self.updated + changes.get("updated", 0),
             unchanged=self.unchanged + changes.get("unchanged", 0),
         )
@@ -87,24 +87,24 @@ class SfcClient:
         raise SfcError(f"failed after {self.retries} attempts: {request.full_url}") from last_error
 
 
-def pull(
+def sync(
     client: SfcClient,
     database: Database,
     language: str = "EN",
     limit: int | None = 10,
-    incremental: bool = False,
-) -> PullResult:
+    full: bool = False,
+) -> SyncResult:
     language = language.upper()
-    if incremental and not database.full_sync_completed(language):
-        raise SfcError("incremental pull requires a complete baseline; run with --all first")
+    if not full and limit is None and not database.full_sync_completed(language):
+        raise SfcError("incremental sync requires a complete baseline; run with --full first")
 
     known = database.release_versions(language)
     latest_issue = max((issue for issue, _ in known.values()), default=None)
-    result = PullResult()
+    result = SyncResult()
     page = 0
     archive_exhausted = False
 
-    while limit is None or result.considered < limit:
+    while limit is None or result.checked < limit:
         response = client.search(page, language)
         items = response.get("items")
         total = response.get("total")
@@ -117,11 +117,11 @@ def pull(
         page_changed = False
         enforcement_items = [item for item in items if item.get("newsType") == "EF"]
         for item in enforcement_items:
-            if limit is not None and result.considered >= limit:
+            if limit is not None and result.checked >= limit:
                 break
 
             ref, version = item_version(item)
-            result = result.add(considered=1)
+            result = result.add(checked=1)
             if known.get(ref) == version:
                 result = result.add(unchanged=1)
                 continue
@@ -133,7 +133,7 @@ def pull(
             if ref in known:
                 result = result.add(updated=1)
             else:
-                result = result.add(downloaded=1)
+                result = result.add(added=1)
             known[ref] = version
 
         page += 1
@@ -141,12 +141,12 @@ def pull(
         if exhausted:
             archive_exhausted = True
             break
-        if incremental and latest_issue is not None:
+        if not full and limit is None and latest_issue is not None:
             page_reaches_known_history = any(item.get("issueDate", "") <= latest_issue for item in items)
             if page_reaches_known_history and not page_changed:
                 break
 
-    if archive_exhausted and limit is None and not incremental:
+    if archive_exhausted and full:
         database.set_full_sync_completed(language, True)
     return result
 
@@ -172,31 +172,28 @@ def validate_content(content: dict[str, Any], ref: str, language: str) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Pull SFC enforcement releases into SQLite.")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--all", action="store_true", help="Reconcile the complete news archive.")
-    mode.add_argument("--incremental", action="store_true", help="Pull new and recently changed releases.")
-    parser.add_argument("--limit", type=int, default=10, help="Newest enforcement releases to reconcile (default: 10).")
+    parser = argparse.ArgumentParser(description="Sync SFC enforcement releases into SQLite.")
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--full", action="store_true", help="Reconcile the complete news archive.")
+    scope.add_argument("--limit", type=int, help="Reconcile the newest N enforcement releases.")
     parser.add_argument("--language", default="EN", help="SFC language code (default: EN).")
     parser.add_argument("--db", type=Path, default=Path("data/sfc.sqlite3"))
     args = parser.parse_args()
-    if args.limit < 1:
+    if args.limit is not None and args.limit < 1:
         parser.error("--limit must be positive")
     return args
 
 
 def main() -> None:
     args = parse_args()
-    limit = None if args.all or args.incremental else args.limit
+    limit = None if args.full or args.limit is None else args.limit
     try:
         with Database(args.db) as database:
-            result = pull(
-                SfcClient(), database, language=args.language, limit=limit, incremental=args.incremental
-            )
+            result = sync(SfcClient(), database, language=args.language, limit=limit, full=args.full)
     except SfcError as error:
         raise SystemExit(f"error: {error}") from None
     print(
-        f"considered={result.considered} downloaded={result.downloaded} "
+        f"checked={result.checked} added={result.added} "
         f"updated={result.updated} unchanged={result.unchanged}"
     )
 

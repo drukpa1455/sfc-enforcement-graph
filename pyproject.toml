@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 dependencies = ["pydantic-ai-slim[openai]>=1,<2", "pydantic>=2.12,<3"]
 
 [project.scripts]
-qf-sfc-pull = "qf_sfc.pull:main"
+qf-sfc-sync = "qf_sfc.sync:main"
 qf-sfc-extract = "qf_sfc.extract:main"
 qf-sfc-export = "qf_sfc.export:main"
 

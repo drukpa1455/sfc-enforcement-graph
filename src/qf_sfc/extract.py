@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 from qf_sfc.models import SCHEMA_VERSION, ReleaseExtraction
-from qf_sfc.pull import SfcError
+from qf_sfc.sync import SfcError
 from qf_sfc.store import Database
 
 DEFAULT_MODEL = "gpt-5.6"
@@ -165,8 +165,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", default="EN")
     parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL", DEFAULT_MODEL))
     parser.add_argument("--ref", action="append", default=[], help="Extract one release reference; repeatable.")
-    parser.add_argument("--limit", type=int, default=1, help="Maximum API calls (default: 1).")
-    parser.add_argument("--all", action="store_true", help="Extract every stale or missing release.")
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--full", action="store_true", help="Extract every stale or missing release.")
+    scope.add_argument(
+        "--limit",
+        type=int,
+        help="Extract at most N stale or missing releases (default: 1).",
+    )
     parser.add_argument("--force", action="store_true", help="Re-extract current outputs.")
     parser.add_argument(
         "--max-output-tokens",
@@ -175,7 +180,7 @@ def parse_args() -> argparse.Namespace:
         help=f"Per-call output cap (default: {DEFAULT_MAX_OUTPUT_TOKENS}).",
     )
     args = parser.parse_args()
-    if args.limit < 1:
+    if args.limit is not None and args.limit < 1:
         parser.error("--limit must be positive")
     if args.max_output_tokens < 1:
         parser.error("--max-output-tokens must be positive")
@@ -193,7 +198,7 @@ def main() -> None:
                 database,
                 language=args.language,
                 model=args.model,
-                limit=None if args.all else args.limit,
+                limit=None if args.full else args.limit or 1,
                 refs=set(args.ref),
                 force=args.force,
                 max_output_tokens=args.max_output_tokens,

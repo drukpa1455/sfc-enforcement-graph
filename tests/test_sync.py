@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from qf_sfc.pull import PAGE_SIZE, SfcError, pull
+from qf_sfc.sync import PAGE_SIZE, SfcError, sync
 from qf_sfc.store import Database, related_release_refs
 
 
@@ -51,14 +51,14 @@ def test_limit_counts_only_enforcement_items(tmp_path: Path) -> None:
         contents[ref] = content(ref, issue, issue)
 
     with Database(tmp_path / "test.sqlite3") as database:
-        result = pull(FakeClient(items, contents), database, limit=10)
+        result = sync(FakeClient(items, contents), database, limit=10)
         saved = database.release_versions("EN")
 
-    assert result.downloaded == 10
+    assert result.added == 10
     assert len(saved) == 10
 
 
-def test_incremental_downloads_new_and_skips_known(tmp_path: Path) -> None:
+def test_sync_downloads_new_and_skips_known(tmp_path: Path) -> None:
     known = content("known", "2026-01-01", "2026-01-01")
     new = content("new", "2026-01-02", "2026-01-02")
     client = FakeClient(
@@ -69,17 +69,17 @@ def test_incremental_downloads_new_and_skips_known(tmp_path: Path) -> None:
     with Database(tmp_path / "test.sqlite3") as database:
         database.save_release(content("known", "2026-01-01", "2026-01-01"))
         database.set_full_sync_completed("EN", True)
-        result = pull(client, database, limit=None, incremental=True)
+        result = sync(client, database, limit=None)
 
-    assert result.downloaded == 1
+    assert result.added == 1
     assert result.unchanged == 1
     assert client.content_calls == ["new"]
 
 
-def test_incremental_requires_complete_baseline(tmp_path: Path) -> None:
+def test_sync_requires_complete_baseline(tmp_path: Path) -> None:
     with Database(tmp_path / "test.sqlite3") as database:
-        with pytest.raises(SfcError, match="run with --all first"):
-            pull(FakeClient([], {}), database, limit=None, incremental=True)
+        with pytest.raises(SfcError, match="run with --full first"):
+            sync(FakeClient([], {}), database, limit=None)
 
 
 def test_release_links_are_derived_from_raw_html(tmp_path: Path) -> None:

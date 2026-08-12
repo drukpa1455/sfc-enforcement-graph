@@ -11,7 +11,7 @@ SFC releases → SQLite → typed extraction → graph.json
 
 ## What it does
 
-- Pulls public enforcement releases from the SFC.
+- Syncs public enforcement releases from the SFC.
 - Stores source text, extraction versions, and sync state in SQLite.
 - Projects source-linked mentions and assertions into a deterministic graph.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
@@ -34,10 +34,23 @@ export OPENAI_API_KEY=...
 Build the dataset:
 
 ```sh
-uv run qf-sfc-pull --limit 50
-uv run qf-sfc-extract --limit 20
+uv run qf-sfc-sync --full
+uv run qf-sfc-extract --full
 uv run qf-sfc-export
 ```
+
+Subsequent refreshes use the same straight-line workflow; sync and extraction
+skip unchanged work by default:
+
+```sh
+uv run qf-sfc-sync
+uv run qf-sfc-extract --full
+uv run qf-sfc-export
+```
+
+Use `--limit N` on sync or extraction for bounded samples. Extraction defaults
+to one API call; `--full` processes every stale or missing release, while
+`--full --force` intentionally replaces every current output.
 
 Start the application:
 
