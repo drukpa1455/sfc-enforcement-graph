@@ -31,16 +31,28 @@ Useful requests include:
 ```text
 Find Futu Securities and show its direct connections.
 Show the highest recurring people in the graph.
+Show the people with the highest betweenness centrality.
 Trace the relationship between these two selected nodes.
 Expand this view by two hops without authority hubs.
+Show this entity's community and connected component.
 Which releases support this action?
 ```
 
-Agent tools can search, inspect, rank, trace, expand, show components or
-communities, and focus the graph. A
-focused result remains reversible: use **Show all** or **Overview** to leave it.
-Current Key filters are sent with the chat context, so “this view” means the
-same visible node kinds and edge families the user sees.
+Agent tools can search, inspect, expand, rank, trace paths, traverse one- to
+three-hop neighborhoods, and open bounded community or connected-component
+views. A focused result remains reversible: use **Show all** or **Overview** to
+leave it. Current Key filters are sent with the chat context, so “this view”
+means the same visible node kinds and edge families the user sees.
+
+| Question | Structural operation |
+|---|---|
+| Who appears most often? | Release-count ranking |
+| Who is highly connected or influential? | Degree or PageRank ranking |
+| Who bridges otherwise separate regions? | Betweenness ranking |
+| Who sits in a dense subgraph? | k-core ranking |
+| Which nodes form an algorithmic cluster? | Louvain community |
+| What is reachable at any distance? | Connected component |
+| How are two entities connected? | Shortest evidence-backed path |
 
 ## Interpret cautiously
 

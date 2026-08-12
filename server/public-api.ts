@@ -50,7 +50,7 @@ export function publicApi(graph: GraphData) {
   api.get('/', (context) => context.json({
     name: 'SFC Enforcement Graph API',
     version: 1,
-    endpoints: ['graph', 'metrics', 'search', 'nodes/:id', 'neighborhood', 'components/:id', 'communities/:id', 'rank'],
+    endpoints: ['graph', 'metrics', 'search', 'nodes/:id', 'neighborhood', 'communities/:id', 'components/:id', 'rank'],
   }))
   api.get('/graph', (context) => {
     if (context.req.query('download') === '1') {
@@ -97,7 +97,12 @@ export function publicApi(graph: GraphData) {
 }
 
 function summarize(graph: GraphData) {
-  const componentSizes = count(graph.nodes.map((node) => node.metrics.componentSize))
+  const componentIds = new Set(graph.nodes.flatMap((node) =>
+    node.metrics.component === null ? [] : [node.metrics.component],
+  ))
+  const componentSizes = graph.nodes.flatMap((node) =>
+    node.metrics.component === null ? [] : [node.metrics.componentSize],
+  )
   const issueDates = graph.releases.map((release) => release.issueDate.slice(0, 10)).toSorted()
   return {
     schemaVersion: 1,
@@ -108,15 +113,15 @@ function summarize(graph: GraphData) {
       releases: graph.releases.length,
       nodeKinds: Object.fromEntries(count(graph.nodes.map((node) => node.kind))),
       edgeFamilies: Object.fromEntries(count(graph.links.map((link) => link.family))),
-      components: [...componentSizes].reduce((total, [size, nodes]) => total + nodes / size, 0),
-      isolatedNodes: componentSizes.get(1) ?? 0,
-      largestComponent: Math.max(...componentSizes.keys()),
+      components: componentIds.size,
+      outsideTopology: graph.nodes.length - componentSizes.length,
+      largestComponent: Math.max(0, ...componentSizes),
     },
     nodeMetrics: {
       degree: 'Direct semantic neighbors; evidence edges and authority hubs are excluded.',
       releaseCount: 'Distinct source releases attached to the node.',
       componentSize: 'Nodes in the same semantic connected component.',
-      component: 'Stable identifier of the semantic connected component.',
+      component: "Stable identifier derived from the component's canonical first node.",
       pagerank: 'PageRank over the semantic graph after hub exclusions.',
       betweenness: 'Normalized exact betweenness centrality over the semantic graph.',
       core: 'Highest k-core containing the node.',

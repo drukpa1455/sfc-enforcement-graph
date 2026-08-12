@@ -13,11 +13,9 @@ reversible view of the same data.
     misconduct, and the data is not legal or investment advice.
 
 ```text
-SFC releases → SQLite → typed extraction → graph.json
-                                               ↓
-                                  graph UI ↔ research agent
-                                               ↓
-                                       read-only API
+SFC releases → SQLite → typed extraction → graph.json → Graphology analytics
+                                                               ↓
+                                   graph UI ↔ research agent ↔ read-only API
 ```
 
 ## Start here

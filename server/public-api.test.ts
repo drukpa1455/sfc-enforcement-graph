@@ -45,7 +45,7 @@ test('public search and inspection preserve source evidence', async () => {
   assert.ok(inspected.releases.length > 0)
 })
 
-test('public neighborhood and rank queries stay bounded', async () => {
+test('public structural queries stay bounded', async () => {
   const search = await app.request('/api/v1/search?q=Futu%20Securities')
   const { nodeIds } = await search.json() as { nodeIds: string[] }
   const neighborhood = await app.request(
@@ -72,6 +72,7 @@ test('public neighborhood and rank queries stay bounded', async () => {
   assert.ok(clustered.community === null || clustered.nodes.length > 0)
   assert.equal(component.status, 200)
   assert.ok(connected.component === null || connected.nodes.length > 0)
+  assert.ok(connected.nodes.length <= 80)
   assert.equal(rank.status, 200)
   assert.equal(ranked.metric, 'degree')
   assert.ok(ranked.nodes.length <= 3)

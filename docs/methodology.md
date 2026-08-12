@@ -9,7 +9,9 @@ raw release + version metadata in SQLite
     ↓ extract
 typed source-relative records + exact evidence
     ↓ export
-deterministic graph + replaceable analytics
+deterministic graph.json
+    ↓ serve
+replaceable Graphology analytics
 ```
 
 ### 1. Synchronize
@@ -40,6 +42,8 @@ This is conservative string identity, not verified real-world entity resolution.
 The exporter produces nodes, explicit directed links, source releases, facets,
 facts, and evidence. Ordering and identifiers are deterministic. Rebuilding
 `data/graph.json` from the same SQLite state produces the same projection.
+Graphology derives metrics when the application starts; analytics are not
+persisted in the projection and can be rebuilt without extraction.
 
 ## Graph semantics
 
@@ -62,14 +66,16 @@ release nodes do not dominate semantic topology.
 | Degree | Direct semantic neighbors |
 | Release count | Distinct source releases attached to a node |
 | Component size | Nodes in the same semantic connected component |
-| Component | Stable identifier of the semantic connected component |
+| Component | Stable identifier derived from the component's canonical first node |
 | PageRank | PageRank over the hub-filtered semantic graph |
 | Betweenness | Normalized exact betweenness centrality |
 | Core | Highest k-core containing the node |
 | Community | Louvain community identifier |
 
-Metrics are derived and replaceable. They rank graph structure; they do not
-measure wrongdoing, materiality, credibility, or causal importance.
+Metrics are derived and replaceable. Rank exposes release count, degree,
+PageRank, betweenness, and core individually. Component and community are
+bounded structural views rather than rankable scores. None measures wrongdoing,
+materiality, credibility, or causal importance.
 
 ## Boundaries and limitations
 
