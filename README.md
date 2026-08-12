@@ -9,9 +9,9 @@ releases with an interactive graph and grounded research agent.
 </p>
 
 ```text
-SFC releases → SQLite → typed extraction → graph.json
-                                               ↓
-                                  graph UI ↔ research agent
+SFC releases → SQLite → typed extraction → graph.json → Graphology analytics
+                                                               ↓
+                                                  graph UI ↔ research agent
 ```
 
 ## What it does
@@ -24,8 +24,8 @@ SFC releases → SQLite → typed extraction → graph.json
   parties and generic groups source-local.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
   filter reversible.
-- Ranks recurrence, degree, PageRank, and sampled bridge centrality over the
-  semantic graph, excluding document and authority hubs by default.
+- Ranks recurrence, degree, PageRank, exact betweenness, and k-core over the
+  semantic graph; connected components and Louvain communities expose clusters.
 - Traverses bounded one- to three-hop neighborhoods without inventing shortcut
   edges; proximity is never treated as evidence of misconduct.
 - Switches between a recent overview and the complete graph, with node- and

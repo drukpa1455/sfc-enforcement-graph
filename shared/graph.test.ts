@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, graphSchema, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { analyzeGraph } from './analytics.js'
+import { communityGraph, describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, sourceGraphSchema, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
-const graph = graphSchema.parse(graphJson)
+const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
 const regulator = graph.nodes.find((node) => node.label === 'Securities and Futures Commission' && node.releaseRefs.includes('26PR119'))?.id ?? ''
 const broker = graph.nodes.find((node) => node.label === 'Futu Securities International (Hong Kong) Limited')?.id ?? ''
@@ -88,11 +89,30 @@ test('neighborhood traverses real paths without authority hubs', () => {
 })
 
 test('rank exposes one metric without combining unlike signals', () => {
-  const result = rankGraph(graph, 'bridge', ['person'], 5)
-  assert.equal(result.metric, 'bridge')
+  const result = rankGraph(graph, 'betweenness', ['person'], 5)
+  assert.equal(result.metric, 'betweenness')
   assert.ok(result.nodes.length > 0)
   assert.ok(result.nodes.every((node) => node.kind === 'person'))
-  assert.ok(result.nodes.every((node, index) => index === 0 || result.nodes[index - 1].metrics.bridge >= node.metrics.bridge))
+  assert.ok(result.nodes.every((node, index) => index === 0 || result.nodes[index - 1].metrics.betweenness >= node.metrics.betweenness))
+})
+
+test('community exposes a structural cluster without inventing edges', () => {
+  const result = communityGraph(graph, broker)
+  assert.notEqual(result.community, null)
+  assert.ok(result.nodeIds.includes(broker))
+  assert.ok(result.nodes.every((node) => node.metrics.community === result.community))
+  assert.ok(result.links.every((link) => result.nodeIds.includes(link.source) && result.nodeIds.includes(link.target)))
+})
+
+test('analytics excludes releases and authority hubs', () => {
+  const authority = graph.nodes.find((node) => node.id === regulator)
+  const release = graph.nodes.find((node) => node.kind === 'release')
+  assert.ok(authority)
+  assert.ok(release)
+  assert.deepEqual(
+    [authority, release].map((node) => [node.metrics.degree, node.metrics.pagerank, node.metrics.community]),
+    [[0, 0, null], [0, 0, null]],
+  )
 })
 
 test('tool output becomes an explicit graph view', () => {

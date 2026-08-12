@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const NODE_KINDS = ['release', 'person', 'organization', 'fund', 'group', 'instrument', 'unknown', 'matter', 'risk', 'action'] as const
 export const NODE_FAMILIES = ['source', 'entity', 'matter', 'risk', 'action'] as const
 export const EDGE_FAMILIES = ['evidence', 'participation', 'relationship'] as const
-export const GRAPH_METRICS = ['pagerank', 'bridge', 'degree', 'releaseCount'] as const
+export const GRAPH_METRICS = ['pagerank', 'betweenness', 'core', 'degree', 'releaseCount'] as const
 
 const facetsSchema = z.record(z.string(), z.array(z.string()))
 const factSchema = z.object({
@@ -13,7 +13,7 @@ const factSchema = z.object({
   releaseRef: z.string().min(1),
 })
 
-export const graphNodeSchema = z.object({
+export const sourceGraphNodeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   kind: z.enum(NODE_KINDS),
@@ -21,13 +21,20 @@ export const graphNodeSchema = z.object({
   releaseRefs: z.array(z.string().min(1)),
   facets: facetsSchema,
   facts: z.array(factSchema),
-  metrics: z.object({
-    degree: z.number().int().nonnegative(),
-    releaseCount: z.number().int().positive(),
-    componentSize: z.number().int().positive(),
-    pagerank: z.number().nonnegative(),
-    bridge: z.number().min(0).max(1),
-  }),
+})
+
+const graphMetricsSchema = z.object({
+  degree: z.number().int().nonnegative(),
+  releaseCount: z.number().int().positive(),
+  componentSize: z.number().int().positive(),
+  pagerank: z.number().nonnegative(),
+  betweenness: z.number().min(0).max(1),
+  core: z.number().int().nonnegative(),
+  community: z.number().int().nonnegative().nullable(),
+})
+
+export const graphNodeSchema = sourceGraphNodeSchema.extend({
+  metrics: graphMetricsSchema,
 })
 
 export const graphLinkSchema = z.object({
@@ -70,23 +77,27 @@ export const graphContextSchema = z.object({
   }).optional(),
 })
 
-export const graphSchema = z.object({
-  nodes: z.array(graphNodeSchema),
-  links: z.array(graphLinkSchema),
-  releases: z.array(releaseSchema),
-}).superRefine((graph, context) => {
-  const ids = new Set(graph.nodes.map((node) => node.id))
-  if (ids.size !== graph.nodes.length) {
-    context.addIssue({ code: 'custom', message: 'node IDs must be unique' })
-  }
-  for (const link of graph.links) {
-    if (!ids.has(link.source) || !ids.has(link.target)) {
-      context.addIssue({ code: 'custom', message: `unknown link endpoint: ${link.source} → ${link.target}` })
+function graphSchemaFor<Node extends z.ZodType<{ id: string }>>(node: Node) {
+  return z.object({
+    nodes: z.array(node),
+    links: z.array(graphLinkSchema),
+    releases: z.array(releaseSchema),
+  }).superRefine((graph, context) => {
+    const ids = new Set(graph.nodes.map((item) => item.id))
+    if (ids.size !== graph.nodes.length) context.addIssue({ code: 'custom', message: 'node IDs must be unique' })
+    for (const link of graph.links) {
+      if (!ids.has(link.source) || !ids.has(link.target)) {
+        context.addIssue({ code: 'custom', message: `unknown link endpoint: ${link.source} → ${link.target}` })
+      }
     }
-  }
-})
+  })
+}
+
+export const sourceGraphSchema = graphSchemaFor(sourceGraphNodeSchema)
+export const graphSchema = graphSchemaFor(graphNodeSchema)
 
 export type GraphNode = z.infer<typeof graphNodeSchema>
+export type SourceGraphData = z.infer<typeof sourceGraphSchema>
 export type GraphLink = z.infer<typeof graphLinkSchema>
 export type GraphData = z.infer<typeof graphSchema>
 export type GraphView = { mode: 'focus'; nodeIds: string[]; selectedNodeIds: string[] }
@@ -159,6 +170,19 @@ export function rankGraph(
     .toSorted((left, right) => right.metrics[metric] - left.metrics[metric] || left.label.localeCompare(right.label))
     .slice(0, limit)
   return { nodeIds: nodes.map((node) => node.id), nodes, metric }
+}
+
+export function communityGraph(graph: GraphData, nodeId: string, limit = 80) {
+  const seed = graph.nodes.find((node) => node.id === nodeId)
+  const community = seed?.metrics.community
+  if (!seed || community === null || community === undefined) {
+    return { ...graphResult(graph, seed ? [nodeId] : []), community: null, truncated: false }
+  }
+  const members = graph.nodes
+    .filter((node) => node.metrics.community === community)
+    .toSorted((left, right) => right.metrics.pagerank - left.metrics.pagerank || left.label.localeCompare(right.label))
+  const nodeIds = [nodeId, ...members.map((node) => node.id).filter((id) => id !== nodeId)].slice(0, limit)
+  return { ...graphResult(graph, nodeIds), community, truncated: members.length > limit }
 }
 
 export function neighborhood(

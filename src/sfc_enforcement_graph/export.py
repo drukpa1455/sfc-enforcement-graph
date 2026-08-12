@@ -10,7 +10,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Iterable
 
-from sfc_enforcement_graph.analytics import add_metrics
 from sfc_enforcement_graph.models import (
     EXTRACTION_VERSION,
     Action,
@@ -70,7 +69,6 @@ def export_graph(
             known_releases.add(target_ref)
         links.append(link(f"release:{source_ref}", target_id, "references", "evidence", "Related SFC release", source_ref))
 
-    add_metrics(nodes, links)
     return {"nodes": list(nodes.values()), "links": links, "releases": releases}
 
 
@@ -282,7 +280,6 @@ def node(
         "releaseRefs": [ref],
         "facets": facets or {},
         "facts": facts or [],
-        "metrics": {},
     }
 
 
