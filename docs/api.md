@@ -19,6 +19,19 @@ GET /api/v1/
 
 Returns the API name, version, and endpoint names.
 
+## OpenAPI
+
+```http
+GET /api/v1/openapi.json
+```
+
+Returns the generated OpenAPI 3.1 contract. Route definitions, request
+validation, and the document share one source of truth.
+
+```bash
+curl -L "$BASE_URL/openapi.json" -o openapi.json
+```
+
 ## Download the graph
 
 ```http
@@ -88,6 +101,26 @@ GET /api/v1/neighborhood?id={id}&depth=2&limit=80&includeHubs=false
 The result contains a bounded subgraph, hop counts for people and groups, and a
 `truncated` flag. Evidence edges and authority/document hubs are excluded from
 traversal by default.
+
+## Expand nodes
+
+```http
+GET /api/v1/expand?ids={id},{id}
+```
+
+Adds one semantic relationship hop around one to 24 comma-separated graph IDs,
+preserving the seed nodes. The response contains a bounded subgraph and a
+`truncated` flag.
+
+## Trace a path
+
+```http
+GET /api/v1/trace?source={id}&target={id}
+```
+
+Returns the shortest evidence-backed semantic path between two nodes, regardless
+of link direction. Both endpoints must exist; disconnected endpoints return
+HTTP `404`.
 
 ## Inspect a community
 
