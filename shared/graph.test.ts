@@ -8,6 +8,7 @@ const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
 const regulator = graph.nodes.find((node) => node.label === 'Securities and Futures Commission' && node.releaseRefs.includes('26PR119'))?.id ?? ''
 const broker = graph.nodes.find((node) => node.label === 'Futu Securities International (Hong Kong) Limited')?.id ?? ''
+const centralActor = graph.nodes.find((node) => node.label === 'Mr Wong Pak Ming')?.id ?? ''
 const action = 'action:26PR119:action_1'
 const filters = {
   nodeKinds: [...NODE_KINDS],
@@ -46,6 +47,15 @@ test('graph view keeps canonical nodes and includes its selection', () => {
     nodeIds: [broker, action],
     selectedNodeIds: [broker],
   })
+})
+
+test('ego graph view includes a selected entity and its direct relationships', () => {
+  const view = graphView(graph, [centralActor], [centralActor], 'ego')
+  const focused = focusGraph(graph, view.nodeIds)
+
+  assert.deepEqual(view.selectedNodeIds, [centralActor])
+  assert.ok(view.nodeIds.length > 1)
+  assert.ok(focused.links.some((link) => link.source === centralActor || link.target === centralActor))
 })
 
 test('overview keeps recent sources, primary subjects, and assertions', () => {

@@ -12,6 +12,7 @@ import {
   expandNodes,
   GRAPH_METRICS,
   graphContextSchema,
+  GRAPH_VIEW_MODES,
   graphView,
   sourceGraphSchema,
   inspectNode,
@@ -35,7 +36,7 @@ const azure = createOpenAI({
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
 Use search before discussing an entity unless its graph ID is already selected in the current UI context. Use inspect for relationships and evidence.
 When the user says this, these, here, or the current view, use the supplied UI context.
-Research tools do not change the visible graph. When the user asks to show, focus, isolate, map, or visualize something, finish the research and then call show exactly once with the complete intended node set and primary selection.
+Research tools do not change the visible graph. After answering with concrete graph nodes, call show exactly once unless the user asks to preserve the current view. Use ego for one subject's direct relationships and exact for an intentionally assembled node set.
 Use expand to add one relationship hop to known node IDs. Use trace to connect two known node IDs.
 Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, bridging, or densely embedded nodes. Use community for a node's algorithmic cluster and component for its complete connected subgraph.
 Graph proximity is not evidence of misconduct. Describe every path through its explicit relationships and preserve each claim or action status.
@@ -103,13 +104,14 @@ export const agent = new ToolLoopAgent({
       execute: ({ sourceId, targetId }) => tracePath(graph, sourceId, targetId),
     }),
     show: tool({
-      description: 'Set the visible graph once after research when the user explicitly asks to show, focus, isolate, map, or visualize results.',
+      description: 'Set the visible graph once after research. One node defaults to its direct relationship graph; multiple nodes default to the exact set.',
       inputSchema: z.object({
         nodeIds: z.array(z.string().min(1)).min(1).max(80),
         selectedNodeIds: z.array(z.string().min(1)).max(24).default([]),
+        mode: z.enum(GRAPH_VIEW_MODES).optional(),
       }),
-      execute: ({ nodeIds, selectedNodeIds }) => {
-        const view = graphView(graph, nodeIds, selectedNodeIds)
+      execute: ({ nodeIds, selectedNodeIds, mode }) => {
+        const view = graphView(graph, nodeIds, selectedNodeIds, mode)
         return view.nodeIds.length ? { nodeIds: view.nodeIds, view } : { nodeIds: [], error: 'No known graph nodes' }
       },
     }),
