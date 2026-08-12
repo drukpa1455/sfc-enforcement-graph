@@ -28,6 +28,10 @@ Each model call receives one release and may use only that release. The typed
 schema captures mentions, matters, risks, actions, relationships, attributes,
 money, periods, geography, statuses, and evidence.
 
+One extraction task permits at most one provider request. Model validation and
+transport failures are surfaced without retry so call budgets remain explicit;
+replay is an operator decision.
+
 Risk and action types are controlled vocabularies. Each type owns one stable
 family, derived by code rather than extracted separately. A concise
 source-grounded label preserves detail beyond the controlled type. Relationship

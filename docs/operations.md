@@ -19,7 +19,9 @@ uv run sfc-graph-export
 Extraction defaults to one stale or missing release. `--full` processes every
 stale or missing release; `--force` intentionally replaces current outputs.
 `--workers N` bounds concurrent model calls while SQLite writes remain
-serialized. Use `--ref REFERENCE` for a specific release.
+serialized. Each release permits at most one provider request and no transport
+retry; failed releases remain stale for deliberate replay. Use `--ref REFERENCE`
+for a specific release.
 
 ## Source and repair semantics
 
