@@ -17,7 +17,10 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [dependency-groups]
-dev = ["pytest>=8,<10"]
+dev = [
+    "mkdocs-material>=9.7.7,<10",
+    "pytest>=8,<10",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

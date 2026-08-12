@@ -119,6 +119,7 @@ export default function App() {
               : scope.mode === 'all'
                 ? `${graph.nodes.length} nodes · ${graph.links.length} links`
                 : `${visibleGraph.nodes.length} overview · ${graph.nodes.length} total · ${visibleGraph.links.length} links`}</p>
+            <a className="docs-link" href="/docs/">Docs</a>
             {scope.mode === 'all'
               ? <button className="text-button" onClick={showOverview}>Overview</button>
               : <button className="text-button" onClick={showAll}>Show all</button>}

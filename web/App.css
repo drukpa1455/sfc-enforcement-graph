@@ -53,6 +53,7 @@ h1 {
 }
 
 .meta button,
+.meta a,
 .sidebar .layout-switch button,
 .graph-tools button,
 .graph-tools summary {
@@ -71,6 +72,7 @@ h1 {
 }
 
 .meta button:hover,
+.meta a:hover,
 .sidebar .layout-switch button:hover,
 .graph-tools button:hover,
 .graph-tools summary:hover,
@@ -81,6 +83,7 @@ h1 {
 }
 
 .meta .text-button { color: var(--accent); }
+.meta a { text-decoration: none; }
 .meta .icon-button { padding: 0; width: 1.8rem; }
 .layout-switch { border: 1px solid var(--line); border-radius: 5px; display: flex; padding: 0.12rem; }
 .meta .layout-switch button,
@@ -264,7 +267,7 @@ h1 {
   .meta .icon-button { display: none; }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .brand h1 { font-size: 0.85rem; }
   .brand h1 > span:first-child { display: none; }
   .brand .compact-title { display: inline; }

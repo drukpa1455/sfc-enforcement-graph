@@ -21,6 +21,7 @@ import {
   tracePath,
 } from '../shared/graph.js'
 import { CHAT_BODY_LIMIT, CHAT_MESSAGE_LIMIT, chatRequestBudget } from './guardrails.js'
+import { publicApi } from './public-api.js'
 
 const graph = analyzeGraph(sourceGraphSchema.parse(graphJson))
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
@@ -114,6 +115,7 @@ const requests = chatRequestBudget()
 
 app.get('/api/health', (context) => context.json({ status: 'ok' }))
 app.get('/api/graph', (context) => context.json(graph))
+app.route('/api/v1', publicApi(graph))
 app.post('/api/chat', bodyLimit({
   maxSize: CHAT_BODY_LIMIT,
   onError: (context) => context.json({ error: 'chat request is too large' }, 413),

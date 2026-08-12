@@ -7,6 +7,7 @@ import api from './app.js'
 const app = new Hono()
 app.use('*', compress())
 app.route('/', api)
+app.get('/docs', (context) => context.redirect('/docs/'))
 app.use('*', serveStatic({ root: './dist' }))
 app.get('*', serveStatic({ path: './dist/index.html' }))
 
