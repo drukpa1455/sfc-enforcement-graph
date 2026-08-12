@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
 import re
@@ -149,26 +150,46 @@ def extract_releases(
     refs: set[str],
     force: bool,
     max_output_tokens: int,
+    workers: int = 1,
 ) -> tuple[int, int]:
-    extracted = skipped = 0
+    pending = []
+    skipped = 0
     for raw in database.releases(language, refs):
-        ref = require_string(raw, "newsRefNo")
         if not force and database.extraction_is_current(raw, SCHEMA_VERSION, model):
             skipped += 1
             continue
-        if limit is not None and extracted >= limit:
+        if limit is not None and len(pending) >= limit:
             break
+        pending.append(raw)
 
+    def run(raw: dict[str, Any]):
         extraction, result = extract_release(agent, raw, model, max_output_tokens)
-        database.save_extraction(
-            raw,
-            SCHEMA_VERSION,
-            model,
-            extraction.model_dump(mode="json"),
-            result.run_id,
-            asdict(result.usage),
-        )
-        extracted += 1
+        return raw, extraction, result
+
+    extracted = 0
+    failures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(run, raw): raw for raw in pending}
+        for future in concurrent.futures.as_completed(futures):
+            raw = futures[future]
+            try:
+                raw, extraction, result = future.result()
+            except Exception as error:
+                failures.append((require_string(raw, "newsRefNo"), error))
+                continue
+            database.save_extraction(
+                raw,
+                SCHEMA_VERSION,
+                model,
+                extraction.model_dump(mode="json"),
+                result.run_id,
+                asdict(result.usage),
+            )
+            extracted += 1
+
+    if failures:
+        ref, error = failures[0]
+        raise ExtractError(f"{len(failures)} extraction(s) failed; first was {ref}: {error}") from error
     return extracted, skipped
 
 
@@ -193,6 +214,7 @@ def parse_args() -> argparse.Namespace:
         help="Extract at most N stale or missing releases (default: 1).",
     )
     parser.add_argument("--force", action="store_true", help="Re-extract current outputs.")
+    parser.add_argument("--workers", type=int, default=1, help="Concurrent API calls (default: 1).")
     parser.add_argument(
         "--max-output-tokens",
         type=int,
@@ -204,6 +226,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--limit must be positive")
     if args.max_output_tokens < 1:
         parser.error("--max-output-tokens must be positive")
+    if args.workers < 1:
+        parser.error("--workers must be positive")
     if not os.environ.get("OPENAI_API_KEY"):
         parser.error("OPENAI_API_KEY is required")
     return args
@@ -222,6 +246,7 @@ def main() -> None:
                 refs=set(args.ref),
                 force=args.force,
                 max_output_tokens=args.max_output_tokens,
+                workers=args.workers,
             )
     except (ExtractError, SfcError, json.JSONDecodeError) as error:
         raise SystemExit(f"error: {error}") from None
