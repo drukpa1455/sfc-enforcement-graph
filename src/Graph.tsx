@@ -27,6 +27,7 @@ interface Props {
 export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const renderer = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined)
+  const settled = useRef(false)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [hoveredId, setHoveredId] = useState<string>()
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -41,7 +42,7 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
   }, [])
 
   useEffect(() => {
-    if (size.width && size.height) renderer.current?.zoomToFit(250, 70)
+    if (settled.current && size.width && size.height) renderer.current?.zoomToFit(250, 70)
   }, [size])
 
   return (
@@ -53,11 +54,19 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           width={size.width}
           height={size.height}
           backgroundColor={theme === 'sapphire' ? '#212c2a' : '#f4f7f5'}
+          nodeRelSize={4}
           nodeLabel={(node) => tooltip(node.label, label(node.kind), node.summary)}
-          nodeColor={(node) => selected.has(node.id) ? (theme === 'sapphire' ? '#ffffff' : '#1d2522') : palettes[theme][node.kind]}
-          nodeVal={(node) => selected.has(node.id) ? 9 : node.kind === 'release' ? 7 : 4}
+          nodeColor={(node) => palettes[theme][node.kind]}
+          nodeVal={(node) => node.kind === 'release' ? 7 : 4}
           nodeCanvasObjectMode={() => 'after'}
           nodeCanvasObject={(node, context, scale) => {
+            if (selected.has(node.id)) {
+              context.beginPath()
+              context.arc(node.x ?? 0, node.y ?? 0, Math.sqrt(node.kind === 'release' ? 7 : 4) * 4 + 4 / scale, 0, 2 * Math.PI)
+              context.strokeStyle = theme === 'sapphire' ? '#a7ffa0' : '#2f7d72'
+              context.lineWidth = 2 / scale
+              context.stroke()
+            }
             if (node.kind !== 'release' && node.id !== hoveredId && !selected.has(node.id)) return
             const size = 11 / scale
             context.font = `${size}px sans-serif`
@@ -69,10 +78,10 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
             `${nodeNames.get(endpointId(link.source)) ?? endpointId(link.source)} → ${nodeNames.get(endpointId(link.target)) ?? endpointId(link.target)}`,
             link.evidence,
           )}
-          linkColor={(link) => selected.has(endpointId(link.source)) && selected.has(endpointId(link.target))
+          linkColor={(link) => selected.has(endpointId(link.source)) || selected.has(endpointId(link.target))
             ? (theme === 'sapphire' ? '#a7ffa0' : '#2f7d72')
             : (theme === 'sapphire' ? '#a7ffa033' : '#c6ded7')}
-          linkWidth={(link) => selected.has(endpointId(link.source)) && selected.has(endpointId(link.target)) ? 2 : 0.7}
+          linkWidth={(link) => selected.has(endpointId(link.source)) || selected.has(endpointId(link.target)) ? 1.8 : 0.7}
           onNodeClick={(node) => onSelectNodes([node.id])}
           onLinkClick={(link) => onSelectLink({
             ...link,
@@ -82,7 +91,10 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           onNodeHover={(node) => setHoveredId(node?.id)}
           onBackgroundClick={() => onSelectNodes([])}
           linkHoverPrecision={8}
-          onEngineStop={() => renderer.current?.zoomToFit(250, 70)}
+          onEngineStop={() => {
+            settled.current = true
+            renderer.current?.zoomToFit(250, 70)
+          }}
           cooldownTicks={80}
         />
       )}

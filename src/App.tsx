@@ -41,7 +41,7 @@ export default function App() {
   const showView = useCallback((view: GraphView) => {
     setSelectedLink(undefined)
     setFocusIds(view.nodeIds)
-    setSelectedIds(view.nodeIds)
+    setSelectedIds(view.selectedNodeIds)
   }, [])
   const selectNodes = useCallback((nodeIds: string[]) => {
     setSelectedLink(undefined)
@@ -79,7 +79,14 @@ export default function App() {
           theme={theme}
         />
       </section>
-      <Chat graph={graph} selected={selected} selectedLink={selectedLink} onSelect={selectNodes} onView={showView} />
+      <Chat
+        graph={graph}
+        selected={selected}
+        selectedLink={selectedLink}
+        visibleNodeIds={visibleGraph.nodes.slice(0, 80).map((node) => node.id)}
+        onSelect={selectNodes}
+        onView={showView}
+      />
     </main>
   )
 }

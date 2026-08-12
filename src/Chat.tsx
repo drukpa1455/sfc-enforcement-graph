@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import type { GraphData, GraphLink, GraphNode, GraphView } from './model'
+import type { GraphContext, GraphData, GraphLink, GraphNode, GraphView } from './model'
 import { viewFromParts } from './model'
 
 interface Props {
   graph: GraphData
   selected: GraphNode[]
   selectedLink?: GraphLink
+  visibleNodeIds: string[]
   onSelect: (ids: string[]) => void
   onView: (view: GraphView) => void
 }
 
-export function Chat({ graph, selected, selectedLink, onSelect, onView }: Props) {
+export function Chat({ graph, selected, selectedLink, visibleNodeIds, onSelect, onView }: Props) {
   const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
@@ -34,7 +35,7 @@ export function Chat({ graph, selected, selectedLink, onSelect, onView }: Props)
         </div>
         {messages.map((message) => (
           <div className={`message ${message.role}`} key={message.id}>
-            {message.parts.map((part, index) => part.type === 'text' ? <span key={index}>{part.text}</span> : null)}
+            {message.parts.map((part, index) => <MessagePart graph={graph} part={part} key={index} />)}
           </div>
         ))}
         {(status === 'submitted' || status === 'streaming') && <p className="status">Thinking…</p>}
@@ -44,7 +45,16 @@ export function Chat({ graph, selected, selectedLink, onSelect, onView }: Props)
         event.preventDefault()
         const text = input.trim()
         if (!text) return
-        void sendMessage({ text })
+        const context: GraphContext = {
+          selectedNodeIds: selected.slice(0, 24).map((node) => node.id),
+          visibleNodeIds,
+          ...(selectedLink ? { selectedLink: {
+            source: selectedLink.source,
+            target: selectedLink.target,
+            kind: selectedLink.kind,
+          } } : {}),
+        }
+        void sendMessage({ text }, { body: { context } })
         setInput('')
       }}>
         <input aria-label="Ask the research agent" placeholder="Find Wong Tim Hi…" value={input} onChange={(event) => setInput(event.target.value)} />
@@ -52,6 +62,48 @@ export function Chat({ graph, selected, selectedLink, onSelect, onView }: Props)
       </form>
     </aside>
   )
+}
+
+function MessagePart({ graph, part }: { graph: GraphData; part: ChatPart }) {
+  if (part.type === 'text') return <span>{boldText(part.text ?? '')}</span>
+  const activity = toolActivity(graph, part)
+  return activity ? <span className="tool-activity">{activity}</span> : null
+}
+
+function boldText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={index}>{part.slice(2, -2)}</strong>
+      : part,
+  )
+}
+
+interface ChatPart {
+  type: string
+  state?: string
+  text?: string
+  input?: unknown
+  errorText?: string
+}
+
+function toolActivity(graph: GraphData, part: ChatPart) {
+  if (!part.type.startsWith('tool-')) return undefined
+  const tool = part.type.slice(5)
+  const done = part.state === 'output-available'
+  if (part.state === 'output-error') return `${label(tool)} failed${part.errorText ? `: ${part.errorText}` : ''}`
+
+  const input = part.input && typeof part.input === 'object' ? part.input : {}
+  const value = (key: string) => String(Reflect.get(input, key) ?? '')
+  const nodeName = (id: string) => graph.nodes.find((node) => node.id === id)?.label ?? id
+
+  if (tool === 'search') return `${done ? 'Searched' : 'Searching'}${value('query') ? ` “${value('query')}”` : ''}${done ? '' : '…'}`
+  if (tool === 'inspect') return `${done ? 'Inspected' : 'Inspecting'} ${nodeName(value('id'))}${done ? '' : '…'}`
+  if (tool === 'expand') return `${done ? 'Expanded' : 'Expanding'} selection${done ? '' : '…'}`
+  if (tool === 'trace') {
+    const path = `${nodeName(value('sourceId'))} → ${nodeName(value('targetId'))}`
+    return `${done ? 'Traced' : 'Tracing'} ${path}${done ? '' : '…'}`
+  }
+  return `${done ? 'Used' : 'Using'} ${label(tool)}${done ? '' : '…'}`
 }
 
 function SelectionDetail({ graph, nodes, link, onSelect }: {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { expandNodes, focusGraph, graphSchema, inspectNode, releaseSchema, searchGraph, tracePath, viewFromParts } from './model.js'
+import { describeGraphContext, expandNodes, focusGraph, graphSchema, inspectNode, normalizeGraphContext, releaseSchema, searchGraph, tracePath, viewFromParts } from './model.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = 'mention:26PR119:mention_3'
@@ -44,9 +44,23 @@ test('trace returns the shortest evidence-backed path', () => {
 test('tool output becomes an explicit graph view', () => {
   assert.deepEqual(viewFromParts([
     { type: 'tool-search', state: 'output-available', output: {
-      view: { mode: 'focus', nodeIds: [broker] },
+      view: { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] },
     } },
-  ]), { mode: 'focus', nodeIds: [broker] })
+  ]), { mode: 'focus', nodeIds: [broker, action], selectedNodeIds: [broker] })
+})
+
+test('graph context keeps only canonical selections', () => {
+  const link = graph.links.find((candidate) => candidate.source === broker && candidate.target === action)
+  assert.ok(link)
+  const context = normalizeGraphContext(graph, {
+    selectedNodeIds: [broker, 'unknown', broker],
+    visibleNodeIds: [broker, action, 'unknown'],
+    selectedLink: { source: link.source, target: link.target, kind: link.kind },
+  })
+  assert.deepEqual(context.selectedNodeIds, [broker])
+  assert.deepEqual(context.visibleNodeIds, [broker, action])
+  assert.equal(context.selectedLink?.kind, link.kind)
+  assert.match(describeGraphContext(graph, context), /Futu/)
 })
 
 test('release links reject executable URL schemes', () => {
