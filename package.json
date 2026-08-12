@@ -14,7 +14,7 @@
     "docs:serve": "uv run --frozen mkdocs serve --strict",
     "lint": "oxlint",
     "start": "node --env-file-if-exists=.env --import tsx server/index.ts",
-    "test": "node --import tsx --test shared/*.test.ts server/*.test.ts"
+    "test": "node --import tsx --test shared/*.test.ts server/*.test.ts web/*.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.40",
