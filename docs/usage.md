@@ -2,7 +2,8 @@
 
 ## Read the workspace
 
-The graph opens as a recent overview beside the research agent.
+The complete graph opens beside the research agent. Use **Overview** when you
+want a quieter recent slice.
 
 - **Show all / Overview** changes the graph scope without changing canonical data.
 - **Labels** shows or hides dynamic node labels.

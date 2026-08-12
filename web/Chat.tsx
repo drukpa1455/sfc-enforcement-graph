@@ -27,6 +27,7 @@ export function Chat({ graph, selected, selectedLink, headerAction, promptReques
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
   const composer = useRef<HTMLInputElement>(null)
+  const messageEnd = useRef<HTMLDivElement>(null)
   const appliedView = useRef<string | undefined>(undefined)
   const historyBoundary = useRef(-1)
   const ignoreViews = useRef(false)
@@ -53,6 +54,10 @@ export function Chat({ graph, selected, selectedLink, headerAction, promptReques
     composer.current?.focus()
   }, [promptRequest])
 
+  useEffect(() => {
+    messageEnd.current?.scrollIntoView({ block: 'end' })
+  }, [messages, status])
+
   return (
     <aside className="sidebar">
       <header>
@@ -71,6 +76,7 @@ export function Chat({ graph, selected, selectedLink, headerAction, promptReques
         ))}
         {(status === 'submitted' || status === 'streaming') && <p className="status">Thinking…</p>}
         {error && <p className="status">{error.message}</p>}
+        <div ref={messageEnd} />
       </div>
       <form className="composer" onSubmit={(event) => {
         event.preventDefault()
