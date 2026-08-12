@@ -5,12 +5,15 @@ import concurrent.futures
 import json
 import os
 import re
-from dataclasses import asdict
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+from pydantic import TypeAdapter
 from pydantic_ai import Agent
+from pydantic_ai.models import Model, infer_model
+from pydantic_ai.providers import Provider, infer_provider_class
+from pydantic_ai.usage import RunUsage, UsageLimits
 from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
 from sfc_enforcement_graph.sync import SfcError
 from sfc_enforcement_graph.store import Database
@@ -49,6 +52,7 @@ Rules:
 """
 
 extractor = Agent(output_type=ReleaseExtraction, instructions=INSTRUCTIONS)
+usage_adapter = TypeAdapter(RunUsage)
 
 
 class ExtractError(RuntimeError):
@@ -95,16 +99,33 @@ def extract_release(
     }
     result = agent.run_sync(
         "SOURCE RELEASE\n" + json.dumps(source, ensure_ascii=False),
-        model=model if ":" in model else f"azure-responses:{model}",
+        model=bounded_model(model),
         model_settings={
             "max_tokens": max_output_tokens,
             "openai_reasoning_effort": "medium",
             "timeout": REQUEST_TIMEOUT_SECONDS,
         },
+        usage_limits=UsageLimits(request_limit=1),
     )
     extraction = repair_evidence_case(result.output, f"{title}\n{text}")
     validate_evidence(extraction, f"{title}\n{text}")
     return extraction, result
+
+
+def bounded_model(name: str) -> Model:
+    ref = name if ":" in name else f"azure-responses:{name}"
+    return infer_model(ref, provider_factory=single_attempt_provider)
+
+
+def single_attempt_provider(name: str) -> Provider[Any]:
+    provider = infer_provider_class(name)()
+    retries = getattr(provider.client, "max_retries", None)
+    if type(retries) is not int:
+        raise ExtractError("model provider retry policy is unknown")
+    provider.client.max_retries = 0
+    if provider.client.max_retries != 0:
+        raise ExtractError("model provider retry policy could not be bounded")
+    return provider
 
 
 def repair_evidence_case(extraction: ReleaseExtraction, source_text: str) -> ReleaseExtraction:
@@ -187,7 +208,7 @@ def extract_releases(
                 model,
                 extraction.model_dump(mode="json"),
                 result.run_id,
-                asdict(result.usage),
+                usage_adapter.dump_python(result.usage, mode="json"),
             )
             extracted += 1
 

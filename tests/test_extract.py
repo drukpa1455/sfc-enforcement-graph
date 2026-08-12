@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -7,9 +8,11 @@ from pydantic_ai.usage import RunUsage
 
 from sfc_enforcement_graph.extract import (
     ExtractError,
+    bounded_model,
     extract_releases,
     extract_text,
     repair_evidence_case,
+    single_attempt_provider,
     validate_evidence,
 )
 from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
@@ -60,11 +63,11 @@ def test_repairs_unique_evidence_casing() -> None:
     assert repaired.mentions[0].evidence.quote == "Example Limited"
 
 
-def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
+def test_extract_releases_writes_validated_record(tmp_path: Path, monkeypatch) -> None:
     call = {}
     result = SimpleNamespace(
         output=extraction(),
-        usage=RunUsage(input_tokens=10, output_tokens=20),
+        usage=RunUsage(input_tokens=10, output_tokens=20, cost=Decimal("0.25")),
         run_id="run_1",
     )
 
@@ -73,6 +76,9 @@ def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
         return result
 
     agent = SimpleNamespace(run_sync=run_sync)
+    monkeypatch.setattr(
+        "sfc_enforcement_graph.extract.bounded_model", lambda model: f"bounded:{model}"
+    )
 
     with Database(tmp_path / "test.sqlite3") as database:
         database.save_release(
@@ -91,12 +97,45 @@ def test_extract_releases_writes_validated_record(tmp_path: Path) -> None:
         saved = database.connection.execute("SELECT * FROM extractions").fetchone()
 
     assert (extracted, skipped) == (1, 0)
-    assert call["model"] == "azure-responses:test-model"
+    assert call["model"] == "bounded:test-model"
     assert call["model_settings"]["openai_reasoning_effort"] == "medium"
     assert call["model_settings"]["timeout"] == 180
+    assert call["usage_limits"].request_limit == 1
     assert saved["source_ref"] == "sample"
     usage = json.loads(saved["usage_json"])
     assert (usage["input_tokens"], usage["output_tokens"]) == (10, 20)
+    assert usage["cost"] == "0.25"
+
+
+def test_bounded_model_disables_transport_retries(monkeypatch) -> None:
+    client = SimpleNamespace(max_retries=2)
+    provider = SimpleNamespace(client=client)
+    call = {}
+
+    monkeypatch.setattr(
+        "sfc_enforcement_graph.extract.infer_provider_class", lambda name: lambda: provider
+    )
+
+    def infer_model(ref, provider_factory):
+        call["ref"] = ref
+        call["provider"] = provider_factory("azure-responses")
+        return "model"
+
+    monkeypatch.setattr("sfc_enforcement_graph.extract.infer_model", infer_model)
+
+    assert bounded_model("test-model") == "model"
+    assert call == {"ref": "azure-responses:test-model", "provider": provider}
+    assert client.max_retries == 0
+
+
+def test_provider_fails_closed_when_retry_policy_is_unknown(monkeypatch) -> None:
+    provider = SimpleNamespace(client=SimpleNamespace())
+    monkeypatch.setattr(
+        "sfc_enforcement_graph.extract.infer_provider_class", lambda name: lambda: provider
+    )
+
+    with pytest.raises(ExtractError, match="retry policy is unknown"):
+        single_attempt_provider("azure-responses")
 
 
 def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:
@@ -122,7 +161,7 @@ def test_release_iteration_does_not_hold_a_read_lock(tmp_path: Path) -> None:
         writer.save_release(third)
 
 
-def test_parallel_extraction_has_one_database_writer(tmp_path: Path) -> None:
+def test_parallel_extraction_has_one_database_writer(tmp_path: Path, monkeypatch) -> None:
     path = tmp_path / "test.sqlite3"
     result = SimpleNamespace(
         output=extraction(),
@@ -130,6 +169,7 @@ def test_parallel_extraction_has_one_database_writer(tmp_path: Path) -> None:
         run_id="run_1",
     )
     agent = SimpleNamespace(run_sync=lambda *args, **kwargs: result)
+    monkeypatch.setattr("sfc_enforcement_graph.extract.bounded_model", lambda model: model)
 
     with Database(path) as database:
         for ref in ("first", "second"):
@@ -151,13 +191,17 @@ def test_parallel_extraction_has_one_database_writer(tmp_path: Path) -> None:
         assert database.connection.execute("SELECT count(*) FROM extractions").fetchone()[0] == 2
 
 
-def test_parallel_extraction_saves_successes_before_reporting_failures(tmp_path: Path) -> None:
+def test_parallel_extraction_saves_successes_before_reporting_failures(
+    tmp_path: Path, monkeypatch
+) -> None:
     path = tmp_path / "test.sqlite3"
 
     def run_sync(prompt: str, **kwargs):
         if '"reference": "bad"' in prompt:
             raise RuntimeError("bad release")
         return SimpleNamespace(output=extraction(), usage=RunUsage(), run_id="run_1")
+
+    monkeypatch.setattr("sfc_enforcement_graph.extract.bounded_model", lambda model: model)
 
     with Database(path) as database:
         for ref in ("good", "bad"):
