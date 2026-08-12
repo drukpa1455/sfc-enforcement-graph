@@ -21,6 +21,21 @@ test('follow-ups retain conversation text without completed tool payloads', () =
   assert.ok(JSON.stringify(compacted).length < 1_000)
 })
 
+test('compacted text drops provider state that depends on omitted reasoning', () => {
+  const compacted = compactChatHistory([
+    { role: 'assistant', parts: [{
+      type: 'text',
+      text: 'Futu is an intermediary.',
+      providerMetadata: { openai: { itemId: 'msg_123' } },
+    }] },
+    { role: 'user', parts: [{ type: 'text', text: 'What connects it to Ng?' }] },
+  ])
+
+  assert.deepEqual(compacted[0].parts, [
+    { type: 'text', text: 'Futu is an intermediary.' },
+  ])
+})
+
 test('tool-only history is removed while the active message stays intact', () => {
   const active = { role: 'assistant', parts: [{ type: 'tool-search', output: 'active' }] }
   const compacted = compactChatHistory([
