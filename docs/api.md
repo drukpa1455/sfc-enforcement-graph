@@ -43,7 +43,8 @@ GET /api/v1/metrics
 ```
 
 Returns coverage dates, node/link/release totals, node-kind and edge-family
-distributions, component counts, metric definitions, and rankable metric names.
+distributions, connected-component counts, metric definitions, and rankable
+metric names.
 
 ## Search
 
@@ -98,14 +99,16 @@ Returns the highest-PageRank members of the node's Louvain community as a
 bounded subgraph. Community membership is a structural clue, not evidence of a
 relationship or misconduct.
 
-## Inspect a component
+## Inspect a connected component
 
 ```http
 GET /api/v1/components/{id}
 ```
 
-Returns the highest-PageRank members of the node's connected component as a
-bounded subgraph. The response reports when a larger component was truncated.
+Returns at most 80 members of the node's complete connected component. The seed
+is retained and remaining members are ordered by PageRank. The response reports
+whether the component was truncated. Connectivity is a structural clue, not
+evidence of a direct relationship or misconduct.
 
 ## Rank nodes
 

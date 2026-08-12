@@ -19,10 +19,10 @@ SFC releases → SQLite → typed extraction → graph.json → Graphology analy
 
 - Keeps every graph claim attached to an exact source release and evidence quote.
 - Preserves allegation, finding, conviction, order, and sought-action status.
-- Searches, ranks, traces, and traverses bounded evidence-backed neighborhoods.
+- Gives the agent bounded search, inspection, expansion, ranking, path,
+  neighborhood, component, and community operations.
 - Computes degree, PageRank, exact betweenness, k-core, components, and Louvain
   communities over the semantic graph with Graphology.
-- Exposes bounded component and community views, ranked internally by PageRank.
 - Makes every agent-driven graph focus and every visual filter reversible.
 - Exposes the complete dataset and graph metrics without model calls or credentials.
 
@@ -63,8 +63,8 @@ curl -L 'http://localhost:8787/api/v1/graph?download=1' -o graph.json
 ```
 
 The versioned API supports search, node inspection, bounded neighborhoods,
-components, communities, metric rankings, summary metrics, and the complete JSON download. See the
-[API reference](docs/api.md).
+components, communities, metric rankings, summary metrics, and the complete
+JSON download. See the [API reference](docs/api.md).
 
 ## Documentation
 
@@ -80,8 +80,8 @@ production server exposes the generated site at `/docs/`.
 ## Architecture
 
 ```text
-src/sfc_enforcement_graph/  sync, extract, store, analytics, export
-shared/                     graph contract and pure queries
+src/sfc_enforcement_graph/  sync, extract, store, export
+shared/                     graph contract, analytics, pure queries
 server/                     HTTP, public API, and research agent
 web/                        React interface
 docs/                       source documentation
