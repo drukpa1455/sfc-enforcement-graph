@@ -27,6 +27,7 @@ export function Graph({ graph, selectedIds, onSelect, theme }: Props) {
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [hoveredId, setHoveredId] = useState<string>()
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
+  const renderedGraph = useMemo(() => structuredClone(graph), [graph])
 
   useEffect(() => {
     if (!container.current) return
@@ -40,7 +41,7 @@ export function Graph({ graph, selectedIds, onSelect, theme }: Props) {
       {size.width > 0 && size.height > 0 && (
         <ForceGraph2D<GraphNode, GraphLink>
           ref={renderer}
-          graphData={graph}
+          graphData={renderedGraph}
           width={size.width}
           height={size.height}
           backgroundColor={theme === 'sapphire' ? '#212c2a' : '#f4f7f5'}

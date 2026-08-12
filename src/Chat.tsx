@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import type { GraphNode } from './model'
-import { selectionFromParts } from './model'
+import type { GraphNode, GraphView } from './model'
+import { viewFromParts } from './model'
 
 interface Props {
   selected: GraphNode[]
   onSelect: (ids: string[]) => void
+  onView: (view: GraphView) => void
 }
 
-export function Chat({ selected, onSelect }: Props) {
+export function Chat({ selected, onSelect, onView }: Props) {
   const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const [input, setInput] = useState('')
 
   useEffect(() => {
-    const selection = selectionFromParts(messages.flatMap((message) => message.parts))
-    if (selection) onSelect(selection)
-  }, [messages, onSelect])
+    const view = viewFromParts(messages.flatMap((message) => message.parts))
+    if (view) onView(view)
+  }, [messages, onView])
 
   return (
     <aside className="sidebar">

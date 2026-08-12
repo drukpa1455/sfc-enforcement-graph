@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from './Chat'
 import { Graph } from './Graph'
-import type { GraphData } from './model'
+import { focusGraph, type GraphData, type GraphView } from './model'
 import './App.css'
 
 export type Theme = 'jade' | 'sapphire'
@@ -9,6 +9,7 @@ export type Theme = 'jade' | 'sapphire'
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [focusIds, setFocusIds] = useState<string[]>()
   const [error, setError] = useState<string>()
   const [theme, setTheme] = useState<Theme>(() =>
     localStorage.getItem('theme') === 'jade' ? 'jade' : 'sapphire',
@@ -31,10 +32,18 @@ export default function App() {
       )
   }, [])
 
-  if (error) return <main className="centered">{error}</main>
-  if (!graph) return <main className="centered">Loading graph…</main>
+  const selected = graph?.nodes.filter((node) => selectedIds.includes(node.id)) ?? []
+  const visibleGraph = useMemo(
+    () => graph && focusIds ? focusGraph(graph, focusIds) : graph,
+    [focusIds, graph],
+  )
+  const showView = useCallback((view: GraphView) => {
+    setFocusIds(view.nodeIds)
+    setSelectedIds(view.nodeIds)
+  }, [])
 
-  const selected = graph.nodes.filter((node) => selectedIds.includes(node.id))
+  if (error) return <main className="centered">{error}</main>
+  if (!graph || !visibleGraph) return <main className="centered">Loading graph…</main>
 
   return (
     <main className="workspace">
@@ -45,15 +54,16 @@ export default function App() {
             <h1>Connected conduct</h1>
           </div>
           <div className="meta">
-            <p>{graph.nodes.length} nodes · {graph.links.length} links</p>
+            <p>{focusIds ? `${visibleGraph.nodes.length} of ${graph.nodes.length}` : graph.nodes.length} nodes · {visibleGraph.links.length} links</p>
+            {focusIds && <button onClick={() => setFocusIds(undefined)}>Show all</button>}
             <button onClick={() => setTheme(theme === 'sapphire' ? 'jade' : 'sapphire')}>
               {theme === 'sapphire' ? 'Jade' : 'Sapphire'}
             </button>
           </div>
         </header>
-        <Graph graph={graph} selectedIds={selectedIds} onSelect={setSelectedIds} theme={theme} />
+        <Graph graph={visibleGraph} selectedIds={selectedIds} onSelect={setSelectedIds} theme={theme} />
       </section>
-      <Chat selected={selected} onSelect={setSelectedIds} />
+      <Chat selected={selected} onSelect={setSelectedIds} onView={showView} />
     </main>
   )
 }

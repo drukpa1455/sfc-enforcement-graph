@@ -42,6 +42,7 @@ export const graphSchema = z.object({
 export type GraphNode = z.infer<typeof graphNodeSchema>
 export type GraphLink = z.infer<typeof graphLinkSchema>
 export type GraphData = z.infer<typeof graphSchema>
+export type GraphView = { mode: 'focus'; nodeIds: string[] }
 
 export function searchGraph(graph: GraphData, query: string, limit = 12) {
   const terms = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
@@ -61,11 +62,27 @@ export function inspectNode(graph: GraphData, id: string) {
   return { nodeIds, node, links, releases }
 }
 
-export function selectionFromParts(parts: Array<{ type: string; state?: string; output?: unknown }>) {
+export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {
+  const visible = new Set(nodeIds)
+  const nodes = graph.nodes.filter((node) => visible.has(node.id))
+  const links = graph.links.filter((link) => visible.has(link.source) && visible.has(link.target))
+  const releaseRefs = new Set(nodes.flatMap((node) => node.releaseRefs))
+  return {
+    nodes,
+    links,
+    releases: graph.releases.filter((release) => releaseRefs.has(release.ref)),
+  }
+}
+
+export function viewFromParts(parts: Array<{ type: string; state?: string; output?: unknown }>): GraphView | undefined {
   for (const part of [...parts].reverse()) {
     if (part.state !== 'output-available' || !part.output || typeof part.output !== 'object') continue
-    const nodeIds = Reflect.get(part.output, 'nodeIds')
-    if (Array.isArray(nodeIds) && nodeIds.every((id) => typeof id === 'string')) return nodeIds
+    const view = Reflect.get(part.output, 'view')
+    if (!view || typeof view !== 'object' || Reflect.get(view, 'mode') !== 'focus') continue
+    const nodeIds = Reflect.get(view, 'nodeIds')
+    if (Array.isArray(nodeIds) && nodeIds.length && nodeIds.every((id) => typeof id === 'string')) {
+      return { mode: 'focus', nodeIds }
+    }
   }
   return undefined
 }

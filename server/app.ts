@@ -12,18 +12,19 @@ export const agent = new ToolLoopAgent({
   stopWhen: isStepCount(4),
   instructions: `You answer questions only from the supplied SFC enforcement graph.
 Use search before discussing an entity. Use inspect for its relationships and evidence.
+Tool results focus the visible graph. For requests to show or isolate a subject, search it and inspect the relevant result.
 Distinguish allegations, findings, convictions, and sought actions. Cite release references.
 If the graph does not support an answer, say so. Keep answers concise.`,
   tools: {
     search: tool({
       description: 'Find graph nodes by name, kind, or summary text.',
       inputSchema: z.object({ query: z.string().min(1) }),
-      execute: ({ query }) => searchGraph(graph, query),
+      execute: ({ query }) => withFocus(searchGraph(graph, query)),
     }),
     inspect: tool({
       description: 'Inspect one graph node, its immediate neighbors, source releases, and evidence.',
       inputSchema: z.object({ id: z.string().min(1) }),
-      execute: ({ id }) => inspectNode(graph, id) ?? { nodeIds: [], error: `Unknown node: ${id}` },
+      execute: ({ id }) => withFocus(inspectNode(graph, id) ?? { nodeIds: [], error: `Unknown node: ${id}` }),
     }),
   },
 })
@@ -45,3 +46,7 @@ app.post('/api/chat', async (context) => {
 })
 
 export default app
+
+function withFocus<T extends { nodeIds: string[] }>(result: T) {
+  return { ...result, view: { mode: 'focus' as const, nodeIds: result.nodeIds } }
+}
