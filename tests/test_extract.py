@@ -11,7 +11,7 @@ from sfc_enforcement_graph.extract import (
     repair_evidence_case,
     validate_evidence,
 )
-from sfc_enforcement_graph.models import ReleaseExtraction
+from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
 from sfc_enforcement_graph.store import Database
 
 

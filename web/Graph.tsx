@@ -3,38 +3,22 @@ import ForceGraph2D, { type ForceGraphMethods, type NodeObject } from 'react-for
 import type { Theme } from './App'
 import {
   EDGE_FAMILIES,
-  edgeFamily,
-  filterGraph,
-  NODE_KINDS,
+  NODE_FAMILIES,
+  nodeFamily,
   type EdgeFamily,
   type GraphData,
   type GraphLink,
   type GraphNode,
+  type NodeFamily,
 } from '../shared/graph'
 
-type Family = 'source' | 'entity' | 'matter' | 'risk' | 'action'
 type Shape = 'square' | 'circle' | 'diamond' | 'triangle' | 'hexagon'
 
-const NODE_FAMILIES: readonly Family[] = ['source', 'entity', 'matter', 'risk', 'action']
-
-const familyByKind: Record<GraphNode['kind'], Family> = {
-  release: 'source',
-  person: 'entity',
-  organization: 'entity',
-  fund: 'entity',
-  group: 'entity',
-  instrument: 'entity',
-  unknown: 'entity',
-  matter: 'matter',
-  risk: 'risk',
-  action: 'action',
-}
-
-const shapeByFamily: Record<Family, Shape> = {
+const shapeByFamily: Record<NodeFamily, Shape> = {
   source: 'square', entity: 'circle', matter: 'diamond', risk: 'triangle', action: 'hexagon',
 }
 
-const colors: Record<Theme, Record<Family | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>> = {
+const colors: Record<Theme, Record<NodeFamily | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>> = {
   dark: {
     source: '#a7ffa0', entity: '#70a99f', matter: '#75ece0', risk: '#ff9580', action: '#e6c384',
     line: '#a7ffa024', muted: '#f8f8f2aa', surface: '#171f1dee', text: '#f8f8f2', accent: '#a7ffa0',
@@ -58,36 +42,45 @@ const edgeDashes: Record<EdgeFamily, number[] | null> = {
 
 interface Props {
   graph: GraphData
+  unfilteredGraph: GraphData
+  nodeFamilies: Set<NodeFamily>
+  edgeFamilies: Set<EdgeFamily>
+  onNodeFamilies: (value: Set<NodeFamily>) => void
+  onEdgeFamilies: (value: Set<EdgeFamily>) => void
   selectedIds: string[]
   onSelectLink: (link: GraphLink) => void
   onSelectNodes: (ids: string[]) => void
   theme: Theme
 }
 
-export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }: Props) {
+export function Graph({
+  graph,
+  unfilteredGraph,
+  nodeFamilies,
+  edgeFamilies,
+  onNodeFamilies,
+  onEdgeFamilies,
+  selectedIds,
+  onSelectLink,
+  onSelectNodes,
+  theme,
+}: Props) {
   const container = useRef<HTMLDivElement>(null)
   const renderer = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined)
   const settled = useRef(false)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [hoveredId, setHoveredId] = useState<string>()
   const [showLabels, setShowLabels] = useState(true)
-  const [nodeFamilies, setNodeFamilies] = useState<Set<Family>>(() => new Set(NODE_FAMILIES))
-  const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
-  const nodeKinds = useMemo(
-    () => new Set(NODE_KINDS.filter((kind) => nodeFamilies.has(familyByKind[kind]))),
-    [nodeFamilies],
-  )
-  const filteredGraph = useMemo(() => filterGraph(graph, nodeKinds, edgeFamilies), [edgeFamilies, graph, nodeKinds])
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
-  const renderedGraph = useMemo(() => structuredClone(filteredGraph), [filteredGraph])
+  const renderedGraph = useMemo(() => structuredClone(graph), [graph])
   const topologyKey = useMemo(
-    () => `${filteredGraph.nodes.map((node) => node.id).join('\0')}|${[...edgeFamilies].sort().join(',')}`,
-    [edgeFamilies, filteredGraph.nodes],
+    () => `${graph.nodes.map((node) => node.id).join('\0')}|${[...edgeFamilies].sort().join(',')}`,
+    [edgeFamilies, graph.nodes],
   )
-  const nodeNames = useMemo(() => new Map(filteredGraph.nodes.map((node) => [node.id, node.label])), [filteredGraph.nodes])
-  const nodeCounts = useMemo(() => counts(graph.nodes.map((node) => familyByKind[node.kind])), [graph.nodes])
-  const edgeCounts = useMemo(() => counts(graph.links.map((link) => edgeFamily(link.kind))), [graph.links])
-  const focused = filteredGraph.nodes.length <= 40
+  const nodeNames = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node.label])), [graph.nodes])
+  const nodeCounts = useMemo(() => counts(unfilteredGraph.nodes.map((node) => nodeFamily(node.kind))), [unfilteredGraph.nodes])
+  const edgeCounts = useMemo(() => counts(unfilteredGraph.links.map((link) => link.family)), [unfilteredGraph.links])
+  const focused = graph.nodes.length <= 40
   const filtered = nodeFamilies.size < NODE_FAMILIES.length || edgeFamilies.size < EDGE_FAMILIES.length
   const palette = colors[theme]
 
@@ -102,23 +95,23 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
     const graphRenderer = renderer.current
     if (!graphRenderer || !size.width || !size.height) return
     graphRenderer.zoomToFit(0, focused ? 100 : 64)
-    const maximumZoom = filteredGraph.nodes.length <= 250 ? 2.2 : 1
+    const maximumZoom = graph.nodes.length <= 250 ? 2.2 : 1
     if (graphRenderer.zoom() > maximumZoom) graphRenderer.zoom(maximumZoom)
-  }, [filteredGraph.nodes.length, focused, size])
+  }, [graph.nodes.length, focused, size])
 
   useEffect(() => {
     const instance = renderer.current
     const charge = instance?.d3Force('charge') as { strength?: (value: number) => unknown } | undefined
-    charge?.strength?.(focused ? -70 : filteredGraph.nodes.length <= 250 ? -24 : -100)
+    charge?.strength?.(focused ? -70 : graph.nodes.length <= 250 ? -24 : -100)
     settled.current = false
     instance?.d3ReheatSimulation()
-  }, [filteredGraph.nodes.length, focused, size.width, topologyKey])
+  }, [graph.nodes.length, focused, size.width, topologyKey])
 
-  const toggleNodeFamily = (family: Family) => setNodeFamilies((current) => toggle(current, family))
-  const toggleEdgeFamily = (family: EdgeFamily) => setEdgeFamilies((current) => toggle(current, family))
+  const toggleNodeFamily = (family: NodeFamily) => onNodeFamilies(toggle(nodeFamilies, family))
+  const toggleEdgeFamily = (family: EdgeFamily) => onEdgeFamilies(toggle(edgeFamilies, family))
   const resetFilters = () => {
-    setNodeFamilies(new Set(NODE_FAMILIES))
-    setEdgeFamilies(new Set(EDGE_FAMILIES))
+    onNodeFamilies(new Set(NODE_FAMILIES))
+    onEdgeFamilies(new Set(EDGE_FAMILIES))
   }
 
   useEffect(() => {
@@ -156,10 +149,10 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           backgroundColor={theme === 'dark' ? '#212c2a' : '#f4f7f5'}
           nodeRelSize={3}
           nodeLabel={(node) => tooltip(node.label, label(node.kind), node.summary)}
-          nodeVal={(node) => nodeValue(familyByKind[node.kind])}
+          nodeVal={(node) => nodeValue(nodeFamily(node.kind))}
           nodeCanvasObjectMode={() => 'replace'}
           nodeCanvasObject={(node, context, scale) => {
-            const family = familyByKind[node.kind]
+            const family = nodeFamily(node.kind)
             const radius = nodeRadius(family)
             drawNode(context, node.x ?? 0, node.y ?? 0, radius, family, palette[family])
             if (selected.has(node.id)) drawSelection(context, node.x ?? 0, node.y ?? 0, radius, scale, palette.accent)
@@ -175,9 +168,9 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           )}
           linkColor={(link) => isIncident(link, selected)
             ? palette.accent
-            : edgeColors[theme][edgeFamily(link.kind)]}
-          linkLineDash={(link) => edgeDashes[edgeFamily(link.kind)]}
-          linkWidth={(link) => isIncident(link, selected) ? 1.6 : edgeFamily(link.kind) === 'evidence' ? 0.55 : 0.85}
+            : edgeColors[theme][link.family]}
+          linkLineDash={(link) => edgeDashes[link.family]}
+          linkWidth={(link) => isIncident(link, selected) ? 1.6 : link.family === 'evidence' ? 0.55 : 0.85}
           linkDirectionalArrowLength={focused ? 3 : 0}
           linkDirectionalArrowRelPos={0.96}
           onNodeClick={(node) => onSelectNodes([node.id])}
@@ -197,7 +190,7 @@ export function Graph({ graph, selectedIds, onSelectLink, onSelectNodes, theme }
           cooldownTicks={focused ? 80 : 160}
         />
       )}
-      {!filteredGraph.nodes.length && <p className="graph-empty">No nodes match these filters.</p>}
+      {!graph.nodes.length && <p className="graph-empty">No nodes match these filters.</p>}
     </div>
   )
 }
@@ -212,10 +205,10 @@ function KeyMenu({
 }: {
   edgeCounts: Map<EdgeFamily, number>
   edges: ReadonlySet<EdgeFamily>
-  nodeCounts: Map<Family, number>
-  nodes: ReadonlySet<Family>
+  nodeCounts: Map<NodeFamily, number>
+  nodes: ReadonlySet<NodeFamily>
   onToggleEdge: (family: EdgeFamily) => void
-  onToggleNode: (family: Family) => void
+  onToggleNode: (family: NodeFamily) => void
 }) {
   const menu = useDismissableMenu()
   return (
@@ -283,15 +276,15 @@ function counts<T>(values: T[]) {
   return result
 }
 
-function nodeValue(family: Family) {
+function nodeValue(family: NodeFamily) {
   return family === 'source' ? 5 : family === 'entity' ? 3 : 4
 }
 
-function nodeRadius(family: Family) {
+function nodeRadius(family: NodeFamily) {
   return family === 'source' ? 6.5 : family === 'entity' ? 5 : 5.75
 }
 
-function drawNode(context: CanvasRenderingContext2D, x: number, y: number, radius: number, family: Family, color: string) {
+function drawNode(context: CanvasRenderingContext2D, x: number, y: number, radius: number, family: NodeFamily, color: string) {
   context.beginPath()
   if (family === 'entity') context.arc(x, y, radius, 0, 2 * Math.PI)
   if (family === 'source') context.rect(x - radius, y - radius, radius * 2, radius * 2)
@@ -326,7 +319,7 @@ function drawLabel(
   node: NodeObject<GraphNode>,
   radius: number,
   scale: number,
-  palette: Record<Family | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>,
+  palette: Record<NodeFamily | 'line' | 'muted' | 'surface' | 'text' | 'accent', string>,
 ) {
   const text = compactLabel(node.label)
   const fontSize = (node.kind === 'release' ? 11 : 10.5) / scale

@@ -1,21 +1,36 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chat } from './Chat'
 import { Graph } from './Graph'
-import { focusGraph, overviewGraph, type GraphData, type GraphLink, type GraphView } from '../shared/graph'
+import {
+  EDGE_FAMILIES,
+  filterGraph,
+  focusGraph,
+  NODE_KINDS,
+  NODE_FAMILIES,
+  nodeFamily,
+  overviewGraph,
+  type EdgeFamily,
+  type GraphContext,
+  type GraphData,
+  type GraphLink,
+  type GraphView,
+  type NodeFamily,
+} from '../shared/graph'
 import './App.css'
 
 export type Theme = 'light' | 'dark'
 type Layout = 'graph' | 'split' | 'agent'
+type Scope = { mode: 'overview' } | { mode: 'all' } | { mode: 'focus'; nodeIds: string[] }
 
 export default function App() {
   const [graph, setGraph] = useState<GraphData>()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedLink, setSelectedLink] = useState<GraphLink>()
-  const [focusIds, setFocusIds] = useState<string[]>()
-  const [showFullGraph, setShowFullGraph] = useState(false)
+  const [scope, setScope] = useState<Scope>({ mode: 'overview' })
+  const [nodeFamilies, setNodeFamilies] = useState<Set<NodeFamily>>(() => new Set(NODE_FAMILIES))
+  const [edgeFamilies, setEdgeFamilies] = useState<Set<EdgeFamily>>(() => new Set(EDGE_FAMILIES))
   const [layout, setLayout] = useState<Layout>('split')
   const [viewReset, setViewReset] = useState(0)
-  const [viewVersion, setViewVersion] = useState(0)
   const [error, setError] = useState<string>()
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme')
@@ -42,30 +57,34 @@ export default function App() {
   }, [])
 
   const selected = graph?.nodes.filter((node) => selectedIds.includes(node.id)) ?? []
+  const scopedGraph = useMemo(
+    () => graph && (scope.mode === 'focus' ? focusGraph(graph, scope.nodeIds) : scope.mode === 'all' ? graph : overviewGraph(graph)),
+    [graph, scope],
+  )
+  const nodeKinds = useMemo(
+    () => new Set(NODE_KINDS.filter((kind) => nodeFamilies.has(nodeFamily(kind)))),
+    [nodeFamilies],
+  )
   const visibleGraph = useMemo(
-    () => graph && (focusIds ? focusGraph(graph, focusIds) : showFullGraph ? graph : overviewGraph(graph)),
-    [focusIds, graph, showFullGraph],
+    () => scopedGraph && filterGraph(scopedGraph, nodeKinds, edgeFamilies),
+    [edgeFamilies, nodeKinds, scopedGraph],
   )
   const showView = useCallback((view: GraphView) => {
     setSelectedLink(undefined)
-    setFocusIds(view.nodeIds)
+    setScope({ mode: 'focus', nodeIds: view.nodeIds })
     setSelectedIds(view.selectedNodeIds)
-    setViewVersion((version) => version + 1)
   }, [])
   const showAll = useCallback(() => {
-    setFocusIds(undefined)
-    setShowFullGraph(true)
+    setScope({ mode: 'all' })
     setSelectedIds([])
     setSelectedLink(undefined)
     setViewReset((version) => version + 1)
-    setViewVersion((version) => version + 1)
   }, [])
   const showOverview = useCallback(() => {
-    setShowFullGraph(false)
+    setScope({ mode: 'overview' })
     setSelectedIds([])
     setSelectedLink(undefined)
     setViewReset((version) => version + 1)
-    setViewVersion((version) => version + 1)
   }, [])
   const selectNodes = useCallback((nodeIds: string[]) => {
     setSelectedLink(undefined)
@@ -77,7 +96,11 @@ export default function App() {
   }, [])
 
   if (error) return <main className="centered">{error}</main>
-  if (!graph || !visibleGraph) return <main className="centered">Loading graph…</main>
+  if (!graph || !scopedGraph || !visibleGraph) return <main className="centered">Loading graph…</main>
+  const filters = { nodeKinds: [...nodeKinds], edgeFamilies: [...edgeFamilies] }
+  const view: GraphContext['view'] = scope.mode === 'focus'
+    ? { mode: 'focus', nodeIds: visibleGraph.nodes.slice(0, 80).map((node) => node.id), ...filters }
+    : { mode: scope.mode, ...filters }
 
   return (
     <main className="workspace" data-layout={layout}>
@@ -91,12 +114,12 @@ export default function App() {
             </div>
           </div>
           <div className="meta">
-            <p>{focusIds
+            <p>{scope.mode === 'focus'
               ? `${visibleGraph.nodes.length} of ${graph.nodes.length} nodes · ${visibleGraph.links.length} links`
-              : showFullGraph
+              : scope.mode === 'all'
                 ? `${graph.nodes.length} nodes · ${graph.links.length} links`
                 : `${visibleGraph.nodes.length} overview · ${graph.nodes.length} total · ${visibleGraph.links.length} links`}</p>
-            {showFullGraph && !focusIds
+            {scope.mode === 'all'
               ? <button className="text-button" onClick={showOverview}>Overview</button>
               : <button className="text-button" onClick={showAll}>Show all</button>}
             <LayoutSwitch layout={layout} onChange={setLayout} />
@@ -111,8 +134,12 @@ export default function App() {
           </div>
         </header>
         <Graph
-          key={viewVersion}
           graph={visibleGraph}
+          unfilteredGraph={scopedGraph}
+          nodeFamilies={nodeFamilies}
+          edgeFamilies={edgeFamilies}
+          onNodeFamilies={setNodeFamilies}
+          onEdgeFamilies={setEdgeFamilies}
           selectedIds={selectedIds}
           onSelectLink={selectLink}
           onSelectNodes={selectNodes}
@@ -123,7 +150,7 @@ export default function App() {
         graph={graph}
         selected={selected}
         selectedLink={selectedLink}
-        view={focusIds ? { mode: 'focus', nodeIds: visibleGraph.nodes.slice(0, 80).map((node) => node.id) } : { mode: 'all' }}
+        view={view}
         viewReset={viewReset}
         headerAction={<LayoutSwitch layout={layout} onChange={setLayout} />}
         onSelect={selectNodes}

@@ -14,7 +14,8 @@ RiskId = Annotated[str, StringConstraints(pattern=r"^risk_[1-9][0-9]*$")]
 ActionId = Annotated[str, StringConstraints(pattern=r"^action_[1-9][0-9]*$")]
 Term = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
 Currency = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
-SCHEMA_VERSION = 9
+# Bump whenever the extraction schema or instructions change.
+EXTRACTION_VERSION = 9
 
 
 class Model(BaseModel):

@@ -124,7 +124,7 @@ class Database:
         yield from ((row["source_ref"], row["target_ref"]) for row in rows)
 
     def extractions(
-        self, schema_version: int, model: str, language: str
+        self, extraction_version: int, model: str, language: str
     ) -> Iterable[tuple[dict[str, Any], dict[str, Any]]]:
         rows = self.connection.execute(
             """SELECT r.raw_json, e.extraction_json
@@ -133,12 +133,12 @@ class Database:
             WHERE e.schema_version = ? AND e.model = ? AND r.language = ?
               AND e.source_modification_time = r.modification_time
             ORDER BY r.issue_date DESC, r.source_ref DESC""",
-            (schema_version, model, language.upper()),
+            (extraction_version, model, language.upper()),
         )
         for row in rows:
             yield json.loads(row["raw_json"]), json.loads(row["extraction_json"])
 
-    def extraction_is_current(self, raw: dict[str, Any], schema_version: int, model: str) -> bool:
+    def extraction_is_current(self, raw: dict[str, Any], extraction_version: int, model: str) -> bool:
         row = self.connection.execute(
             """SELECT 1 FROM extractions
             WHERE source_ref = ? AND language = ? AND source_modification_time = ?
@@ -147,7 +147,7 @@ class Database:
                 raw["newsRefNo"],
                 raw["lang"].upper(),
                 raw["modificationTime"],
-                schema_version,
+                extraction_version,
                 model,
             ),
         ).fetchone()
@@ -156,7 +156,7 @@ class Database:
     def save_extraction(
         self,
         raw: dict[str, Any],
-        schema_version: int,
+        extraction_version: int,
         model: str,
         extraction: dict[str, Any],
         run_id: str | None,
@@ -166,7 +166,7 @@ class Database:
             raw["newsRefNo"],
             raw["lang"].upper(),
             raw["modificationTime"],
-            schema_version,
+            extraction_version,
             model,
             encode(extraction),
             now(),

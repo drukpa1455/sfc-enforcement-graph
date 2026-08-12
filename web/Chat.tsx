@@ -120,6 +120,8 @@ function toolActivity(graph: GraphData, part: ChatPart) {
   if (tool === 'search') return `${done ? 'Searched' : 'Searching'}${value('query') ? ` “${value('query')}”` : ''}${done ? '' : '…'}`
   if (tool === 'inspect') return `${done ? 'Inspected' : 'Inspecting'} ${nodeName(value('id'))}${done ? '' : '…'}`
   if (tool === 'expand') return `${done ? 'Expanded' : 'Expanding'} selection${done ? '' : '…'}`
+  if (tool === 'neighborhood') return `${done ? 'Mapped' : 'Mapping'} ${value('depth') || '2'}-hop neighborhood${done ? '' : '…'}`
+  if (tool === 'rank') return `${done ? 'Ranked' : 'Ranking'} by ${label(value('metric'))}${done ? '' : '…'}`
   if (tool === 'trace') {
     const path = `${nodeName(value('sourceId'))} → ${nodeName(value('targetId'))}`
     return `${done ? 'Traced' : 'Tracing'} ${path}${done ? '' : '…'}`
@@ -147,6 +149,17 @@ function NodeDetail({ graph, node }: { graph: GraphData; node: GraphNode }) {
       <span>{label(node.kind)}</span>
       <h3>{node.label}</h3>
       <p>{node.summary}</p>
+      <dl className="facts">
+        {metricFacts(node).map(([name, value]) => (
+          <div key={name}><dt>{label(name)}</dt><dd>{value}</dd></div>
+        ))}
+        {Object.entries(node.facets).flatMap(([name, values]) => values.map((value) => (
+          <div key={`${name}:${value}`}><dt>{label(name)}</dt><dd>{value}</dd></div>
+        )))}
+        {node.facts.map((fact, index) => (
+          <div key={`${fact.name}:${index}`} title={fact.evidence}><dt>{label(fact.name)}</dt><dd>{fact.value}</dd></div>
+        ))}
+      </dl>
       <ReleaseLinks graph={graph} refs={node.releaseRefs} />
     </article>
   )
@@ -160,6 +173,14 @@ function LinkDetail({ graph, link }: { graph: GraphData; link: GraphLink }) {
       <span>{label(link.kind)}</span>
       <h3>{source} → {target}</h3>
       <p>{link.evidence}</p>
+      <dl className="facts">
+        {Object.entries(link.facets).flatMap(([name, values]) => values.map((value) => (
+          <div key={`${name}:${value}`}><dt>{label(name)}</dt><dd>{value}</dd></div>
+        )))}
+        {link.facts.map((fact, index) => (
+          <div key={`${fact.name}:${index}`} title={fact.evidence}><dt>{label(fact.name)}</dt><dd>{fact.value}</dd></div>
+        ))}
+      </dl>
       <ReleaseLinks graph={graph} refs={[link.releaseRef]} />
     </article>
   )
@@ -176,4 +197,13 @@ function ReleaseLinks({ graph, refs }: { graph: GraphData; refs: string[] }) {
 
 function label(value: string) {
   return value.replaceAll('_', ' ')
+}
+
+function metricFacts(node: GraphNode): Array<[string, string]> {
+  const metrics: Array<[string, number]> = [
+    ['release count', node.metrics.releaseCount],
+    ['degree', node.metrics.degree],
+    ['bridge', node.metrics.bridge],
+  ]
+  return metrics.filter(([, value]) => value > 0).map(([name, value]) => [name, String(value)])
 }
