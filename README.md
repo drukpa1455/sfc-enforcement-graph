@@ -60,11 +60,13 @@ configuration or cost.
 curl http://localhost:8787/api/v1/metrics
 curl 'http://localhost:8787/api/v1/search?q=Futu%20Securities&limit=5'
 curl -L 'http://localhost:8787/api/v1/graph?download=1' -o graph.json
+curl -L http://localhost:8787/api/v1/openapi.json -o openapi.json
 ```
 
 The versioned API supports search, node inspection, bounded neighborhoods,
-components, communities, metric rankings, summary metrics, and the complete
-JSON download. See the [API reference](docs/api.md).
+one-hop expansion, path tracing, components, communities, metric rankings,
+summary metrics, and the complete JSON download. See the
+[API reference](docs/api.md).
 
 ## Documentation
 

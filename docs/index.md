@@ -23,7 +23,7 @@ SFC releases → SQLite → typed extraction → graph.json → Graphology analy
 - [Quickstart](quickstart.md) runs the application and documentation locally.
 - [Using the graph](usage.md) explains navigation, filtering, and agent actions.
 - [Methodology](methodology.md) defines extraction, identity, evidence, and metrics.
-- [API](api.md) documents bounded queries and the complete JSON download.
+- [API](api.md) documents bounded queries, OpenAPI, and the complete JSON download.
 - [Operations](operations.md) covers refresh, verification, and deployment.
 
 ## Ownership

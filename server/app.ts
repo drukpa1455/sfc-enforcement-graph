@@ -118,7 +118,7 @@ export const agent = new ToolLoopAgent({
   },
 })
 
-const app = new Hono()
+const app = new Hono({ strict: false })
 const requests = chatRequestBudget()
 
 app.get('/api/health', (context) => context.json({ status: 'ok' }))
@@ -156,6 +156,7 @@ app.post('/api/chat', bodyLimit({
     timeout: { totalMs: 30_000 },
   })
 })
+app.all('/api/*', (context) => context.json({ error: 'endpoint not found' }, 404))
 
 export default app
 
