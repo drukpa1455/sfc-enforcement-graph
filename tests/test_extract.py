@@ -303,12 +303,30 @@ def test_parallel_extraction_saves_successes_before_reporting_failures(
         )
         assert json.loads(failed["usage_json"])["requests"] == 1
 
-        database.save_extraction(
-            next(database.releases("EN", {"bad"})),
-            EXTRACTION_VERSION,
+        assert extract_releases(
+            SimpleNamespace(run_sync=run_sync),
+            database,
+            "EN",
             "test-model",
-            extraction().model_dump(mode="json"),
-            "run_2",
             None,
+            {"bad"},
+            False,
+            1_000,
+        ) == (0, 1)
+
+        success = SimpleNamespace(output=extraction(), usage=RunUsage(), run_id="run_2")
+        assert extract_releases(
+            SimpleNamespace(run_sync=lambda *args, **kwargs: success),
+            database,
+            "EN",
+            "test-model",
+            None,
+            {"bad"},
+            False,
+            1_000,
+            retry_failures=True,
+        ) == (1, 0)
+        assert (
+            database.connection.execute("SELECT count(*) FROM extraction_failures").fetchone()[0]
+            == 0
         )
-        assert database.connection.execute("SELECT count(*) FROM extraction_failures").fetchone()[0] == 0

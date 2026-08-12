@@ -24,7 +24,8 @@ retry; failed releases remain stale for deliberate replay. Use `--ref REFERENCE`
 for a specific release.
 
 Failed attempts record their exception chain and available usage in
-`extraction_failures`. A later successful extraction clears the matching failure.
+`extraction_failures` and are skipped on later runs. `--retry-failures`
+deliberately replays them; a later success clears the matching failure.
 
 ## Source and repair semantics
 

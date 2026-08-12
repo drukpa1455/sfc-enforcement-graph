@@ -203,11 +203,17 @@ def extract_releases(
     force: bool,
     max_output_tokens: int,
     workers: int = 1,
+    retry_failures: bool = False,
 ) -> tuple[int, int]:
     pending = []
     skipped = 0
     for raw in database.releases(language, refs):
         if not force and database.extraction_is_current(raw, EXTRACTION_VERSION, model):
+            skipped += 1
+            continue
+        if not retry_failures and database.extraction_failure_is_current(
+            raw, EXTRACTION_VERSION, model
+        ):
             skipped += 1
             continue
         if limit is not None and len(pending) >= limit:
@@ -282,6 +288,11 @@ def parse_args() -> argparse.Namespace:
         help="Extract at most N stale or missing releases (default: 1).",
     )
     parser.add_argument("--force", action="store_true", help="Re-extract current outputs.")
+    parser.add_argument(
+        "--retry-failures",
+        action="store_true",
+        help="Retry releases whose current model and schema attempt failed.",
+    )
     parser.add_argument("--workers", type=int, default=1, help="Concurrent API calls (default: 1).")
     parser.add_argument(
         "--max-output-tokens",
@@ -320,6 +331,7 @@ def main() -> None:
                 force=args.force,
                 max_output_tokens=args.max_output_tokens,
                 workers=args.workers,
+                retry_failures=args.retry_failures,
             )
     except (ExtractError, SfcError, json.JSONDecodeError) as error:
         raise SystemExit(f"error: {error}") from None
