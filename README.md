@@ -1,45 +1,65 @@
-# qf-sfc
+# SFC Enforcement Graph
 
-An evidence-backed graph of SFC enforcement releases with a read-only research agent.
+Explore connected entities, actions, and evidence from Hong Kong SFC enforcement
+releases with an interactive graph and grounded research agent.
 
 ```text
-SFC API → SQLite → typed extraction → graph.json → Vite + Hono agent
+SFC releases → SQLite → typed extraction → graph.json
+                                               ↓
+                                  graph UI ↔ research agent
 ```
 
-SQLite owns raw releases, versioned extraction JSON, sync state, and deterministic
-release links. Extraction owns source-relative mentions and assertions.
-`qf-sfc-export` is the sole projection into replaceable `data/graph.json`.
+## What it does
 
-## Data pipeline
+- Pulls public enforcement releases from the SFC.
+- Stores source text, extraction versions, and sync state in SQLite.
+- Projects source-linked mentions and assertions into a deterministic graph.
+- Lets the agent search, inspect, expand, and trace the graph while keeping every
+  filter reversible.
+
+SQLite is the source of truth. `data/graph.json` is a replaceable projection
+produced by `qf-sfc-export`; the browser never owns canonical graph data.
+
+## Run locally
+
+Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js 22+, and an
+OpenAI API key for extraction and chat.
 
 ```sh
 uv sync --group dev
-uv run qf-sfc-pull --limit 50
-uv run qf-sfc-extract --limit 1
-uv run qf-sfc-export
-uv run pytest -q
-```
-
-## Application
-
-```sh
 npm install
-OPENAI_API_KEY=... npm run dev
+export OPENAI_API_KEY=...
 ```
 
-Vite serves the UI on `http://localhost:5173`; it proxies `/api` to Hono on port `8787`.
+Build the dataset:
 
 ```sh
+uv run qf-sfc-pull --limit 50
+uv run qf-sfc-extract --limit 20
+uv run qf-sfc-export
+```
+
+Start the application:
+
+```sh
+npm run dev
+```
+
+Vite serves the UI at `http://localhost:5173` and proxies `/api` to Hono on port
+`8787`.
+
+## Verify
+
+```sh
+uv run pytest -q
 npm test
 npm run lint
 npm run build
-npm start
 ```
 
-The research agent can search, inspect, expand, and trace the shortest
-evidence-backed path. Each tool result carries a focused graph view; **Show all**
-restores the complete graph.
+## Data and scope
 
-Hovering a node or relationship shows its attributes. Clicking pins the full summary or evidence, with source-release links, in the agent sidebar.
-
-Each chat turn includes the canonical node, relationship, and visible-view IDs from the UI. Tool activity is streamed into the conversation so graph changes remain inspectable.
+The included dataset is derived from public [SFC enforcement
+news](https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/).
+Source links remain attached to releases, nodes, and relationships. This project
+is independent of the SFC and is not legal or investment advice.
