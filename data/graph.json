@@ -1,24 +1,244 @@
 {
   "nodes": [
-    { "id": "release:26PR104", "label": "26PR104 · Wong Tim Hi suspended", "kind": "release", "summary": "The SFC suspended Wong Tim Hi for nine months following regulatory breaches.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:wong-tim-hi", "label": "Mr Wong Tim Hi", "kind": "person", "summary": "Former Yuanta licensed representative whose licence was suspended for nine months.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:securities-and-futures-commission", "label": "Securities and Futures Commission", "kind": "organization", "summary": "Hong Kong regulator that investigated and suspended Wong.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:yuanta-securities-hong-kong", "label": "Yuanta Securities (Hong Kong) Company Limited", "kind": "organization", "summary": "Licensed corporation to which Wong was accredited from 2013 to 2026.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:ching-lee-holdings", "label": "Ching Lee Holdings Limited", "kind": "organization", "summary": "Issuer whose shares were involved in related false-trading proceedings.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:two-third-parties", "label": "Two third parties", "kind": "group", "summary": "Unnamed parties allowed to operate or act for four client accounts.", "releaseRefs": ["26PR104"] },
-    { "id": "entity:relevant-clients", "label": "Relevant clients", "kind": "group", "summary": "Clients whose account information and instructions were at issue.", "releaseRefs": ["26PR104"] },
-    { "id": "instrument:ching-lee-shares", "label": "Shares of Ching Lee", "kind": "instrument", "summary": "Shares involved in the false-trading proceedings described by the release.", "releaseRefs": ["26PR104"] }
+    {
+      "id": "release:26PR119",
+      "label": "26PR119 · SFC issues restriction notice to broker to freeze assets of over $125 million linked to suspected IPO fraud",
+      "kind": "release",
+      "summary": "SFC issues restriction notice to broker to freeze assets of over $125 million linked to suspected IPO fraud\r\n",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_1",
+      "label": "Securities and Futures Commission",
+      "kind": "organization",
+      "summary": "The regulator that issued the restriction notice and is conducting the continuing investigation.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_2",
+      "label": "Futu Securities International (Hong Kong) Limited",
+      "kind": "organization",
+      "summary": "The licensed broker legally bound by the restriction notice but expressly stated not to be a subject of the investigation.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_3",
+      "label": "an entity suspected to be involved in a fraudulent scheme",
+      "kind": "organization",
+      "summary": "The unnamed entity holding the restricted client accounts and suspected of involvement in a scheme to create false or artificial IPO-share demand.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_4",
+      "label": "Futu or its other clients",
+      "kind": "group",
+      "summary": "The broker and its other clients, which the release expressly says are not affected by the restriction notice.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_5",
+      "label": "the investing public",
+      "kind": "group",
+      "summary": "The group in whose interest the SFC considers the restriction notice desirable.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "mention:26PR119:mention_6",
+      "label": "shares in an initial public offering",
+      "kind": "instrument",
+      "summary": "The IPO shares for which the suspected scheme allegedly sought to create a false or artificial appearance of demand.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "matter:26PR119:matter_1",
+      "label": "Investigation",
+      "kind": "matter",
+      "summary": "The SFC’s continuing investigation into suspected involvement by an unnamed entity in a fraudulent scheme concerning apparent demand for IPO shares.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "risk:26PR119:risk_1",
+      "label": "False Or Artificial Demand",
+      "kind": "risk",
+      "summary": "The entity is suspected of involvement in a fraudulent scheme to create a false or artificial appearance of demand for IPO shares.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    },
+    {
+      "id": "action:26PR119:action_1",
+      "label": "Restriction Notice",
+      "kind": "action",
+      "summary": "The SFC issued Futu a restriction notice barring dealings with or processing of specified assets in the entity’s client accounts up to the stated amount and requiring immediate notification of instructions concerning those assets.",
+      "releaseRefs": [
+        "26PR119"
+      ]
+    }
   ],
   "links": [
-    { "source": "release:26PR104", "target": "entity:wong-tim-hi", "kind": "primary_subject", "evidence": "The Securities and Futures Commission (SFC) has suspended the licence of Mr Wong Tim Hi", "releaseRef": "26PR104" },
-    { "source": "entity:securities-and-futures-commission", "target": "entity:wong-tim-hi", "kind": "suspended_licence_of", "evidence": "suspended the licence of Mr Wong Tim Hi ... for nine months", "releaseRef": "26PR104" },
-    { "source": "entity:wong-tim-hi", "target": "entity:yuanta-securities-hong-kong", "kind": "accredited_to", "evidence": "was accredited to Yuanta between 10 April 2013 and 31 March 2026", "releaseRef": "26PR104" },
-    { "source": "entity:wong-tim-hi", "target": "entity:two-third-parties", "kind": "allowed_account_operation_by", "evidence": "Wong allowed two third parties to be highly involved in operating, or acting on behalf of, four client accounts", "releaseRef": "26PR104" },
-    { "source": "entity:two-third-parties", "target": "entity:relevant-clients", "kind": "operated_accounts_of", "evidence": "without obtaining written authorisation from the relevant clients", "releaseRef": "26PR104" },
-    { "source": "entity:ching-lee-holdings", "target": "instrument:ching-lee-shares", "kind": "issuer_of", "evidence": "shares of Ching Lee Holdings Limited (Ching Lee)", "releaseRef": "26PR104" },
-    { "source": "release:26PR104", "target": "entity:ching-lee-holdings", "kind": "mentions", "evidence": "false trading in the shares of Ching Lee", "releaseRef": "26PR104" }
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_1",
+      "kind": "mentions",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_2",
+      "kind": "mentions",
+      "evidence": "Futu Securities International (Hong Kong) Limited (Futu)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_3",
+      "kind": "primary_mention",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_4",
+      "kind": "mentions",
+      "evidence": "Futu or its other clients",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_5",
+      "kind": "mentions",
+      "evidence": "the investing public",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "mention:26PR119:mention_6",
+      "kind": "mentions",
+      "evidence": "shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_3",
+      "target": "mention:26PR119:mention_6",
+      "kind": "suspected_scheme_concerning",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "matter:26PR119:matter_1",
+      "kind": "reports",
+      "evidence": "The SFC’s investigation is continuing.",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_1",
+      "target": "matter:26PR119:matter_1",
+      "kind": "authority_for",
+      "evidence": "The SFC’s investigation is continuing.",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_3",
+      "target": "matter:26PR119:matter_1",
+      "kind": "subject_of",
+      "evidence": "The SFC’s investigation is continuing.",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "risk:26PR119:risk_1",
+      "kind": "asserts",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "risk:26PR119:risk_1",
+      "target": "matter:26PR119:matter_1",
+      "kind": "belongs_to",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_1",
+      "target": "risk:26PR119:risk_1",
+      "kind": "authority_for",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_3",
+      "target": "risk:26PR119:risk_1",
+      "kind": "subject_of",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_6",
+      "target": "risk:26PR119:risk_1",
+      "kind": "affected_by",
+      "evidence": "an entity suspected to be involved in a fraudulent scheme to create a false or artificial appearance of demand for shares in an initial public offering (IPO)",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "release:26PR119",
+      "target": "action:26PR119:action_1",
+      "kind": "reports",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice to Futu Securities International (Hong Kong) Limited (Futu), prohibiting it from dealing with or processing assets of up to $125,247,000 in client accounts held by an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "action:26PR119:action_1",
+      "target": "matter:26PR119:matter_1",
+      "kind": "belongs_to",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice to Futu Securities International (Hong Kong) Limited (Futu), prohibiting it from dealing with or processing assets of up to $125,247,000 in client accounts held by an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_1",
+      "target": "action:26PR119:action_1",
+      "kind": "actor_of",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice to Futu Securities International (Hong Kong) Limited (Futu), prohibiting it from dealing with or processing assets of up to $125,247,000 in client accounts held by an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_2",
+      "target": "action:26PR119:action_1",
+      "kind": "target_of",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice to Futu Securities International (Hong Kong) Limited (Futu), prohibiting it from dealing with or processing assets of up to $125,247,000 in client accounts held by an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    },
+    {
+      "source": "mention:26PR119:mention_3",
+      "target": "action:26PR119:action_1",
+      "kind": "affected_by",
+      "evidence": "The Securities and Futures Commission (SFC) has issued a restriction notice to Futu Securities International (Hong Kong) Limited (Futu), prohibiting it from dealing with or processing assets of up to $125,247,000 in client accounts held by an entity suspected to be involved in a fraudulent scheme",
+      "releaseRef": "26PR119"
+    }
   ],
   "releases": [
-    { "ref": "26PR104", "title": "SFC suspends Wong Tim Hi for nine months", "issueDate": "2026-07-06T04:30:00", "url": "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo=26PR104" }
+    {
+      "ref": "26PR119",
+      "title": "SFC issues restriction notice to broker to freeze assets of over $125 million linked to suspected IPO fraud",
+      "issueDate": "2026-07-30T16:21:33.814",
+      "url": "https://apps.sfc.hk/edistributionWeb/gateway/EN/news-and-announcements/news/enforcement-news/doc?refNo=26PR119"
+    }
   ]
 }

@@ -3,12 +3,12 @@
 An evidence-backed graph of SFC enforcement releases with a read-only research agent.
 
 ```text
-SFC API → SQLite → typed extraction → canonical graph → Vite + Hono agent
+SFC API → SQLite → typed extraction → graph.json → Vite + Hono agent
 ```
 
 SQLite owns raw releases, versioned extraction JSON, sync state, and deterministic
-release links. Extraction owns source-relative mentions and assertions. Canonical
-entities and matters are resolved later and exported to replaceable `data/graph.json`.
+release links. Extraction owns source-relative mentions and assertions.
+`qf-sfc-export` is the sole projection into replaceable `data/graph.json`.
 
 ## Data pipeline
 
@@ -16,6 +16,7 @@ entities and matters are resolved later and exported to replaceable `data/graph.
 uv sync --group dev
 uv run qf-sfc-pull --limit 50
 uv run qf-sfc-extract --limit 1
+uv run qf-sfc-export
 uv run pytest -q
 ```
 

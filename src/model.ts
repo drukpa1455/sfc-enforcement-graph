@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const graphNodeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  kind: z.enum(['release', 'person', 'organization', 'group', 'instrument', 'unknown']),
+  kind: z.enum(['release', 'person', 'organization', 'fund', 'group', 'instrument', 'unknown', 'matter', 'risk', 'action']),
   summary: z.string().min(1),
   releaseRefs: z.array(z.string().min(1)),
 })
@@ -48,6 +48,7 @@ export function searchGraph(graph: GraphData, query: string, limit = 12) {
   const terms = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
   const nodes = graph.nodes
     .filter((node) => terms.every((term) => `${node.label} ${node.summary} ${node.kind}`.toLocaleLowerCase().includes(term)))
+    .sort((left, right) => labelScore(right, terms) - labelScore(left, terms))
     .slice(0, limit)
   return { nodeIds: nodes.map((node) => node.id), nodes }
 }
@@ -92,6 +93,7 @@ export function tracePath(graph: GraphData, sourceId: string, targetId: string) 
   const visited = new Set(queue)
   const neighbors = new Map<string, Array<{ nodeId: string; link: GraphLink }>>()
   for (const link of graph.links) {
+    if (link.kind === 'mentions' || link.kind === 'primary_mention') continue
     addNeighbor(neighbors, link.source, link.target, link)
     addNeighbor(neighbors, link.target, link.source, link)
   }
@@ -119,6 +121,11 @@ export function tracePath(graph: GraphData, sourceId: string, targetId: string) 
 
   const result = graphResult(graph, nodeIds)
   return { ...result, links }
+}
+
+function labelScore(node: GraphNode, terms: string[]) {
+  const words = new Set(node.label.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
+  return terms.filter((term) => words.has(term)).length
 }
 
 export function focusGraph(graph: GraphData, nodeIds: string[]): GraphData {

@@ -10,15 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
-from qf_sfc.models import ReleaseExtraction
+from qf_sfc.models import SCHEMA_VERSION, ReleaseExtraction
 from qf_sfc.pull import SfcError
 from qf_sfc.store import Database
 
 DEFAULT_MODEL = "gpt-5.6"
 DEFAULT_MAX_OUTPUT_TOKENS = 12_000
 REQUEST_TIMEOUT_SECONDS = 180
-SCHEMA_VERSION = 8
-
 INSTRUCTIONS = """You extract a high-recall, evidence-backed graph from an SFC enforcement release.
 
 Rules:

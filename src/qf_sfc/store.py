@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-
 SCHEMA = """
 PRAGMA foreign_keys = ON;
 
@@ -118,6 +117,31 @@ class Database:
             (source_ref, language.upper()),
         )
         return [row["target_ref"] for row in rows]
+
+    def release_links(self, source_refs: set[str]) -> Iterable[tuple[str, str]]:
+        if not source_refs:
+            return
+        placeholders = ",".join("?" for _ in source_refs)
+        rows = self.connection.execute(
+            f"SELECT source_ref, target_ref FROM release_links WHERE source_ref IN ({placeholders}) ORDER BY source_ref, target_ref",
+            tuple(sorted(source_refs)),
+        )
+        yield from ((row["source_ref"], row["target_ref"]) for row in rows)
+
+    def extractions(
+        self, schema_version: int, model: str, language: str
+    ) -> Iterable[tuple[dict[str, Any], dict[str, Any]]]:
+        rows = self.connection.execute(
+            """SELECT r.raw_json, e.extraction_json
+            FROM extractions e
+            JOIN releases r USING (source_ref, language)
+            WHERE e.schema_version = ? AND e.model = ? AND r.language = ?
+              AND e.source_modification_time = r.modification_time
+            ORDER BY r.issue_date DESC, r.source_ref DESC""",
+            (schema_version, model, language.upper()),
+        )
+        for row in rows:
+            yield json.loads(row["raw_json"]), json.loads(row["extraction_json"])
 
     def extraction_is_current(self, raw: dict[str, Any], schema_version: int, model: str) -> bool:
         row = self.connection.execute(

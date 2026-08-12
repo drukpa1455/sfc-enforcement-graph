@@ -14,6 +14,7 @@ RiskId = Annotated[str, StringConstraints(pattern=r"^risk_[1-9][0-9]*$")]
 ActionId = Annotated[str, StringConstraints(pattern=r"^action_[1-9][0-9]*$")]
 Term = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
 Currency = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
+SCHEMA_VERSION = 9
 
 
 class Model(BaseModel):
@@ -197,7 +198,7 @@ class Risk(Model):
     matter_id: MatterId | None = Field(default=None, description="Matter this conduct belongs to, when identified.")
     authority_ids: list[MentionId] = Field(default_factory=list)
     subject_ids: list[MentionId] = Field(min_length=1)
-    affected_entity_ids: list[MentionId] = Field(default_factory=list)
+    affected_ids: list[MentionId] = Field(default_factory=list)
     family: Literal[
         "market_abuse",
         "fraud",
@@ -224,7 +225,7 @@ class Action(Model):
     matter_id: MatterId | None = Field(default=None, description="Matter this action belongs to, when identified.")
     actor_ids: list[MentionId] = Field(default_factory=list)
     target_ids: list[MentionId] = Field(min_length=1)
-    affected_entity_ids: list[MentionId] = Field(default_factory=list)
+    affected_ids: list[MentionId] = Field(default_factory=list)
     type: Term = Field(description="Specific normalized action, such as fine, suspension, or compensation_order.")
     description: str = Field(min_length=1)
     status: ActionStatus
@@ -273,11 +274,11 @@ class ReleaseExtraction(Model):
         for risk in self.risks:
             referenced_mentions.update(risk.authority_ids)
             referenced_mentions.update(risk.subject_ids)
-            referenced_mentions.update(risk.affected_entity_ids)
+            referenced_mentions.update(risk.affected_ids)
         for action in self.actions:
             referenced_mentions.update(action.actor_ids)
             referenced_mentions.update(action.target_ids)
-            referenced_mentions.update(action.affected_entity_ids)
+            referenced_mentions.update(action.affected_ids)
         if missing := referenced_mentions - mentions:
             raise ValueError(f"unknown mention ids: {sorted(missing)}")
 

@@ -6,11 +6,13 @@ import type { GraphData, GraphLink, GraphNode } from './model'
 const palettes: Record<Theme, Record<GraphNode['kind'], string>> = {
   sapphire: {
     release: '#a7ffa0', person: '#80ffea', organization: '#8aff80',
-    group: '#ffca80', instrument: '#9580ff', unknown: '#f8f8f2aa',
+    fund: '#ff80bf', group: '#ffca80', instrument: '#9580ff', unknown: '#f8f8f2aa',
+    matter: '#66d9ef', risk: '#ff5555', action: '#f1fa8c',
   },
   jade: {
     release: '#2f7d72', person: '#2f7f78', organization: '#5c8f55',
-    group: '#9a7849', instrument: '#7567a7', unknown: '#4f766f',
+    fund: '#a85b78', group: '#9a7849', instrument: '#7567a7', unknown: '#4f766f',
+    matter: '#477f8c', risk: '#a84f4f', action: '#9a8b49',
   },
 }
 
