@@ -4,15 +4,29 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, expandNodes, graphContextSchema, graphSchema, inspectNode, searchGraph, tracePath } from '../shared/graph.js'
+import {
+  describeGraphContext,
+  expandNodes,
+  GRAPH_METRICS,
+  graphContextSchema,
+  graphSchema,
+  inspectNode,
+  neighborhood,
+  NODE_KINDS,
+  rankGraph,
+  searchGraph,
+  tracePath,
+} from '../shared/graph.js'
 import { CHAT_BODY_LIMIT, CHAT_MESSAGE_LIMIT, chatRequestBudget } from './guardrails.js'
 
 const graph = graphSchema.parse(graphJson)
 const instructions = `You answer questions only from the supplied SFC enforcement graph.
-Use search before discussing an entity unless its canonical ID is already selected in the current UI context. Use inspect for relationships and evidence.
+Use search before discussing an entity unless its graph ID is already selected in the current UI context. Use inspect for relationships and evidence.
 When the user says this, these, here, or the current view, use the supplied UI context.
 Tool results focus the visible graph. For requests to show or isolate a subject, search it and inspect the relevant result.
 Use expand to add one relationship hop to known node IDs. Use trace to connect two known node IDs.
+Use neighborhood for evidence-backed second- or third-degree connections. Use rank to find recurring, central, or bridging nodes.
+Graph proximity is not evidence of misconduct. Describe every path through its explicit relationships and preserve each claim or action status.
 Distinguish allegations, findings, convictions, and sought actions. Cite release references.
 If the graph does not support an answer, say so. Keep answers concise.`
 
@@ -44,6 +58,29 @@ export const agent = new ToolLoopAgent({
       description: 'Add one relationship hop around known node IDs, preserving the existing nodes.',
       inputSchema: z.object({ nodeIds: z.array(z.string().min(1)).min(1).max(24) }),
       execute: ({ nodeIds }) => withFocus(expandNodes(graph, nodeIds), nodeIds),
+    }),
+    neighborhood: tool({
+      description: 'Traverse one to three evidence-backed relationship hops, excluding document and authority hubs by default.',
+      inputSchema: z.object({
+        nodeIds: z.array(z.string().min(1)).min(1).max(12),
+        depth: z.number().int().min(1).max(3).default(2),
+        includeHubs: z.boolean().default(false),
+      }),
+      execute: ({ nodeIds, depth, includeHubs }) =>
+        withFocus(neighborhood(graph, nodeIds, depth, 80, includeHubs), nodeIds),
+    }),
+    rank: tool({
+      description: 'Rank graph nodes by recurrence, direct degree, PageRank, or sampled bridge centrality.',
+      inputSchema: z.object({
+        metric: z.enum(GRAPH_METRICS),
+        kinds: z.array(z.enum(NODE_KINDS)).max(NODE_KINDS.length).optional(),
+        limit: z.number().int().min(1).max(24).default(12),
+        includeHubs: z.boolean().default(false),
+      }),
+      execute: ({ metric, kinds, limit, includeHubs }) => {
+        const result = rankGraph(graph, metric, kinds, limit, includeHubs)
+        return withFocus(result, result.nodeIds)
+      },
     }),
     trace: tool({
       description: 'Find the shortest evidence-backed path between two known node IDs, regardless of link direction.',
@@ -93,5 +130,8 @@ function withFocus<T extends { nodeIds: string[] }>(result: T, selectedNodeIds: 
 
 const chatRequestSchema = z.object({
   messages: z.array(z.unknown()).min(1).max(CHAT_MESSAGE_LIMIT),
-  context: graphContextSchema.default({ selectedNodeIds: [], view: { mode: 'all' } }),
+  context: graphContextSchema.default({
+    selectedNodeIds: [],
+    view: { mode: 'all', nodeKinds: [...NODE_KINDS], edgeFamilies: ['evidence', 'participation', 'relationship'] },
+  }),
 })

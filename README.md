@@ -18,11 +18,16 @@ SFC releases → SQLite → typed extraction → graph.json
 
 - Syncs public enforcement releases from the SFC.
 - Stores source text, extraction versions, and sync state in SQLite.
-- Projects source-linked mentions and assertions into a deterministic graph.
-- Coalesces exact normalized names for named people, organizations, funds, and
-  instruments while leaving generic groups source-local.
+- Projects source-linked mentions, assertions, facets, and evidence-backed facts
+  into a deterministic graph.
+- Coalesces exact normalized probable proper names while leaving descriptive
+  parties and generic groups source-local.
 - Lets the agent search, inspect, expand, and trace the graph while keeping every
   filter reversible.
+- Ranks recurrence, degree, PageRank, and sampled bridge centrality over the
+  semantic graph, excluding document and authority hubs by default.
+- Traverses bounded one- to three-hop neighborhoods without inventing shortcut
+  edges; proximity is never treated as evidence of misconduct.
 - Switches between a recent overview and the complete graph, with node- and
   edge-type filters for direct exploration.
 - Opens with the latest 50 releases, primary subjects, matters, risks, and
@@ -30,6 +35,8 @@ SFC releases → SQLite → typed extraction → graph.json
 
 SQLite is the source of truth. `data/graph.json` is a replaceable projection
 produced by `sfc-graph-export`; the browser never owns canonical graph data.
+Specific risk, action, relationship, and attribute terms remain source-shaped;
+controlled families support broad queries without erasing the original wording.
 
 ```text
 src/sfc_enforcement_graph/  sync, extract, store, export

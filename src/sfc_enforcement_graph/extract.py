@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
-from sfc_enforcement_graph.models import SCHEMA_VERSION, ReleaseExtraction
+from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
 from sfc_enforcement_graph.sync import SfcError
 from sfc_enforcement_graph.store import Database
 
@@ -155,7 +155,7 @@ def extract_releases(
     pending = []
     skipped = 0
     for raw in database.releases(language, refs):
-        if not force and database.extraction_is_current(raw, SCHEMA_VERSION, model):
+        if not force and database.extraction_is_current(raw, EXTRACTION_VERSION, model):
             skipped += 1
             continue
         if limit is not None and len(pending) >= limit:
@@ -179,7 +179,7 @@ def extract_releases(
                 continue
             database.save_extraction(
                 raw,
-                SCHEMA_VERSION,
+                EXTRACTION_VERSION,
                 model,
                 extraction.model_dump(mode="json"),
                 result.run_id,

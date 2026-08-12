@@ -1,16 +1,28 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import graphJson from '../data/graph.json' with { type: 'json' }
-import { describeGraphContext, edgeFamily, expandNodes, filterGraph, focusGraph, graphSchema, inspectNode, normalizeGraphContext, overviewGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
+import { describeGraphContext, EDGE_FAMILIES, expandNodes, filterGraph, focusGraph, graphSchema, inspectNode, neighborhood, NODE_KINDS, normalizeGraphContext, overviewGraph, rankGraph, releaseSchema, searchGraph, tracePath, viewEventFromMessage, viewFromParts } from './graph.js'
 
 const graph = graphSchema.parse(graphJson)
 const suspected = graph.nodes.find((node) => node.label === 'an entity suspected to be involved in a fraudulent scheme')?.id ?? ''
 const regulator = graph.nodes.find((node) => node.label === 'Securities and Futures Commission' && node.releaseRefs.includes('26PR119'))?.id ?? ''
 const broker = graph.nodes.find((node) => node.label === 'Futu Securities International (Hong Kong) Limited')?.id ?? ''
 const action = 'action:26PR119:action_1'
+const filters = {
+  nodeKinds: [...NODE_KINDS],
+  edgeFamilies: [...EDGE_FAMILIES],
+}
 
 test('search returns projection identities', () => {
   assert.equal(searchGraph(graph, 'Futu organization').nodeIds[0], broker)
+})
+
+test('search includes preserved facets and facts', () => {
+  const candidate = graph.nodes.find((node) => node.facts.some((fact) => fact.name === 'stock_code'))
+  assert.ok(candidate)
+  const stockCode = candidate.facts.find((fact) => fact.name === 'stock_code')?.value
+  assert.ok(stockCode)
+  assert.ok(searchGraph(graph, `${stockCode} stock_code`).nodeIds.includes(candidate.id))
 })
 
 test('inspection includes immediate neighbors and evidence', () => {
@@ -46,7 +58,7 @@ test('filters node kinds and semantic edge families', () => {
 
   assert.ok(filtered.nodes.every((node) => ['release', 'risk', 'action'].includes(node.kind)))
   assert.ok(filtered.links.every((link) =>
-    ids.has(link.source) && ids.has(link.target) && edgeFamily(link.kind) === 'evidence',
+    ids.has(link.source) && ids.has(link.target) && link.family === 'evidence',
   ))
   assert.ok(filtered.links.some((link) => link.kind === 'asserts'))
 })
@@ -63,6 +75,24 @@ test('trace returns the shortest evidence-backed path', () => {
   const result = tracePath(graph, broker, regulator)
   assert.deepEqual(result.nodeIds, [broker, regulator])
   assert.equal(result.links.length, 1)
+})
+
+test('neighborhood traverses real paths without authority hubs', () => {
+  const result = neighborhood(graph, [broker], 3)
+  assert.ok(result.nodeIds.includes(broker))
+  assert.ok(!result.nodeIds.includes(regulator))
+  assert.ok(result.people.length > 0)
+  assert.ok(result.people.every((person) => person.hops !== undefined && person.hops <= 3))
+  assert.ok(result.links.every((link) => link.family !== 'evidence'))
+  assert.ok(result.nodes.every((node) => node.metrics.degree <= 40))
+})
+
+test('rank exposes one metric without combining unlike signals', () => {
+  const result = rankGraph(graph, 'bridge', ['person'], 5)
+  assert.equal(result.metric, 'bridge')
+  assert.ok(result.nodes.length > 0)
+  assert.ok(result.nodes.every((node) => node.kind === 'person'))
+  assert.ok(result.nodes.every((node, index) => index === 0 || result.nodes[index - 1].metrics.bridge >= node.metrics.bridge))
 })
 
 test('tool output becomes an explicit graph view', () => {
@@ -90,18 +120,18 @@ test('graph context keeps only canonical selections', () => {
   assert.ok(link)
   const context = normalizeGraphContext(graph, {
     selectedNodeIds: [broker, 'unknown', broker],
-    view: { mode: 'focus', nodeIds: [broker, action, 'unknown'] },
+    view: { mode: 'focus', nodeIds: [broker, action, 'unknown'], ...filters },
     selectedLink: { source: link.source, target: link.target, kind: link.kind },
   })
   assert.deepEqual(context.selectedNodeIds, [broker])
-  assert.deepEqual(context.view, { mode: 'focus', nodeIds: [broker, action] })
+  assert.deepEqual(context.view, { mode: 'focus', nodeIds: [broker, action], ...filters })
   assert.equal(context.selectedLink?.kind, link.kind)
   assert.match(describeGraphContext(graph, context), /Futu/)
 })
 
 test('complete view context does not pretend a truncated sample is visible', () => {
-  const context = normalizeGraphContext(graph, { selectedNodeIds: [], view: { mode: 'all' } })
-  assert.deepEqual(context.view, { mode: 'all' })
+  const context = normalizeGraphContext(graph, { selectedNodeIds: [], view: { mode: 'all', ...filters } })
+  assert.deepEqual(context.view, { mode: 'all', ...filters })
   assert.match(describeGraphContext(graph, context), new RegExp(`all ${graph.nodes.length} nodes`))
 })
 
