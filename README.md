@@ -18,6 +18,8 @@ SFC releases → SQLite → typed extraction → graph.json → Graphology analy
 
 - Keeps every graph claim attached to an exact source release and evidence quote.
 - Preserves allegation, finding, conviction, order, and sought-action status.
+- Separates named entities from release-local descriptive mentions before
+  conservative normalized-name coalescing.
 - Gives the agent bounded search, inspection, expansion, ranking, path,
   neighborhood, component, and community operations.
 - Computes degree, PageRank, exact betweenness, k-core, components, and Louvain

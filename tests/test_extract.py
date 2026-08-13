@@ -36,6 +36,7 @@ def extraction(quote: str = "Example Limited") -> ReleaseExtraction:
                     "type": "organization",
                     "name": "Example Limited",
                     "aliases": [],
+                    "identity": "named",
                     "relevance": "primary",
                     "involvement": ["subject"],
                     "description": "Company named in the release.",

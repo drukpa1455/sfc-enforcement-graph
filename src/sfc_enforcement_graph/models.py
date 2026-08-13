@@ -15,7 +15,7 @@ ActionId = Annotated[str, StringConstraints(pattern=r"^action_[1-9][0-9]*$")]
 Term = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
 Currency = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
 # Bump whenever the extraction schema or instructions change.
-EXTRACTION_VERSION = 10
+EXTRACTION_VERSION = 11
 
 
 class Model(BaseModel):
@@ -275,6 +275,13 @@ class EntityMention(Model):
         default_factory=list,
         description="Alternative names or abbreviations explicitly introduced in this release.",
     )
+    identity: Literal["named", "descriptive"] = Field(
+        description=(
+            "Named only when the source identifies a specific real-world person, organization, fund, or financial "
+            "instrument. Descriptive covers unnamed, generic, collective, or context-dependent references such as "
+            "'the Court', 'his wife', 'a client', or 'shares'. Capitalization does not determine identity."
+        )
+    )
     relevance: Literal["primary", "secondary"] = Field(
         description=(
             "Release-relative prominence. Primary is limited to direct subjects of the new central event and a "
@@ -371,7 +378,9 @@ class Action(Model):
         description="Concise source-grounded label preserving detail beyond the controlled type.",
     )
     description: str = Field(min_length=1)
-    status: ActionStatus
+    event_status: ActionStatus = Field(
+        description="Source-reported lifecycle or state of this event, not the legal status of its underlying claim."
+    )
     amount: Money | None = None
     duration: str | None = Field(default=None, description="Duration exactly as stated, such as 'nine months'.")
     period: Period | None = None

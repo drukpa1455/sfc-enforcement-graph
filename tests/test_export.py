@@ -47,13 +47,14 @@ def test_projects_current_extraction_into_graph(tmp_path: Path) -> None:
     person = next(node for node in graph["nodes"] if node["kind"] == "person")
     action = next(node for node in graph["nodes"] if node["kind"] == "action")
     relationship = next(link for link in graph["links"] if link["kind"] == "regulated_by")
-    assert person["facets"] == {"identity": ["exact_name"], "involvement": ["subject"]}
+    assert person["facets"] == {"identity": ["normalized_name"], "involvement": ["subject"]}
     assert {item["name"] for item in person["facts"]} == {"description", "alias", "age"}
+    assert person["summary"] == "Former licensed representative whose licence was suspended."
     assert action["label"] == "Nine-month licence suspension"
     assert action["facets"] == {
         "action_family": ["sanction"],
         "action_type": ["suspension"],
-        "action_status": ["imposed"],
+        "event_status": ["imposed"],
     }
     risk = next(node for node in graph["nodes"] if node["kind"] == "risk")
     assert risk["label"] == "Written authorization failure"
@@ -82,6 +83,28 @@ def test_coalesces_exact_named_entities_across_releases(tmp_path: Path) -> None:
     regulators = [node for node in graph["nodes"] if node["label"] == "Securities and Futures Commission"]
     assert len(regulators) == 1
     assert regulators[0]["releaseRefs"] == ["first", "second"]
+    assert regulators[0]["summary"] == "Named organization in multiple SFC enforcement releases."
+
+
+def test_named_entity_identity_ignores_a_leading_article(tmp_path: Path) -> None:
+    first = {
+        "newsRefNo": "first", "lang": "EN", "title": "First", "html": "<p>Body</p>",
+        "issueDate": "2026-01-02", "modificationTime": "2026-01-02",
+    }
+    second = {**first, "newsRefNo": "second", "title": "Second"}
+    with Database(tmp_path / "test.sqlite3") as database:
+        for raw, name in ((first, "Securities and Futures Commission"), (second, "The Securities and Futures Commission")):
+            data = extraction()
+            data["mentions"][1]["name"] = name
+            database.save_release(raw)
+            database.save_extraction(raw, EXTRACTION_VERSION, "test-model", data, None, None)
+
+        graph = export_graph(database, "test-model")
+
+    regulators = [node for node in graph["nodes"] if "Securities and Futures Commission" in node["label"]]
+    assert len(regulators) == 1
+    assert regulators[0]["label"] == "Securities and Futures Commission"
+    assert regulators[0]["releaseRefs"] == ["second", "first"]
 
 
 def test_keeps_generic_groups_local_to_their_release(tmp_path: Path) -> None:
@@ -96,6 +119,7 @@ def test_keeps_generic_groups_local_to_their_release(tmp_path: Path) -> None:
     second = {**first, "newsRefNo": "second", "title": "Second release", "issueDate": "2026-01-01"}
     group = extraction()
     group["mentions"][0]["type"] = "person_group"
+    group["mentions"][0]["identity"] = "descriptive"
     with Database(tmp_path / "test.sqlite3") as database:
         for raw in (first, second):
             database.save_release(raw)
@@ -118,6 +142,7 @@ def test_keeps_descriptive_people_local_to_their_release(tmp_path: Path) -> None
     second = {**first, "newsRefNo": "second", "title": "Second"}
     data = extraction()
     data["mentions"][0]["name"] = "another person"
+    data["mentions"][0]["identity"] = "descriptive"
     with Database(tmp_path / "test.sqlite3") as database:
         for raw in (first, second):
             database.save_release(raw)
@@ -128,6 +153,30 @@ def test_keeps_descriptive_people_local_to_their_release(tmp_path: Path) -> None
     assert {node["id"] for node in graph["nodes"] if node["label"] == "another person"} == {
         "mention:first:mention_1", "mention:second:mention_1",
     }
+
+
+def test_identity_does_not_depend_on_capitalization(tmp_path: Path) -> None:
+    raw = {
+        "newsRefNo": "sample", "lang": "EN", "title": "Sample", "html": "<p>Body</p>",
+        "issueDate": "2026-01-01", "modificationTime": "2026-01-01",
+    }
+    named = extraction()
+    named["mentions"][0]["name"] = "香港交易所"
+    descriptive = extraction()
+    descriptive["mentions"][0]["name"] = "The Court"
+    descriptive["mentions"][0]["identity"] = "descriptive"
+
+    with Database(tmp_path / "named.sqlite3") as database:
+        database.save_release(raw)
+        database.save_extraction(raw, EXTRACTION_VERSION, "test-model", named, None, None)
+        named_graph = export_graph(database, "test-model")
+    with Database(tmp_path / "descriptive.sqlite3") as database:
+        database.save_release(raw)
+        database.save_extraction(raw, EXTRACTION_VERSION, "test-model", descriptive, None, None)
+        descriptive_graph = export_graph(database, "test-model")
+
+    assert next(node for node in named_graph["nodes"] if node["kind"] == "person")["id"].startswith("entity:")
+    assert next(node for node in descriptive_graph["nodes"] if node["kind"] == "person")["id"].startswith("mention:")
 
 
 def test_ignores_historical_schema(tmp_path: Path) -> None:

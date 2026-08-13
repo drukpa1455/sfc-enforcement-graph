@@ -49,9 +49,17 @@ replaced deliberately.
 
 ### 3. Resolve identity and export
 
-Probable proper names are coalesced only by kind plus exact normalized name.
-Descriptive parties, unnamed people, and generic groups remain release-local.
-This is conservative string identity, not verified real-world entity resolution.
+The extraction explicitly distinguishes named entities from descriptive mentions.
+Named people, organizations, funds, and instruments are coalesced only by kind
+plus normalized name; normalization folds case and spacing and ignores a leading
+English definite article. Descriptive parties, unnamed people, generic groups,
+and context-dependent references remain release-local. Capitalization is not an
+identity signal. This is conservative string identity, not verified real-world
+entity resolution.
+
+Descriptions remain source-relative evidence-backed facts. Once an entity spans
+multiple releases its display summary becomes neutral, so whichever release is
+exported first does not silently become its canonical description.
 
 The exporter produces nodes, explicit directed links, source releases, facets,
 facts, and evidence. Ordering and identifiers are deterministic. Rebuilding
@@ -103,7 +111,8 @@ materiality, credibility, or causal importance.
   the deployed projection; `/api/v1/metrics` reports the current date range.
 - Model extraction can omit or misclassify source language despite schema and
   evidence validation.
-- Exact-name coalescing can join namesakes or miss spelling variants.
+- Explicit named-entity classification can be wrong; exact-name coalescing can
+  join namesakes or miss spelling variants.
 - A release may describe allegations, procedural steps, findings, or outcomes;
   the status must travel with any interpretation.
 - The original SFC release remains the authoritative source.

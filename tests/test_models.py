@@ -21,6 +21,7 @@ def extraction() -> dict:
                 "type": "person",
                 "name": "Wong Tim Hi",
                 "aliases": ["Timmy Wong"],
+                "identity": "named",
                 "relevance": "primary",
                 "involvement": ["subject"],
                 "description": "Former licensed representative whose licence was suspended.",
@@ -33,6 +34,7 @@ def extraction() -> dict:
                 "type": "organization",
                 "name": "Securities and Futures Commission",
                 "aliases": ["SFC"],
+                "identity": "named",
                 "relevance": "secondary",
                 "involvement": ["authority"],
                 "description": "Regulator that imposed the suspension.",
@@ -87,7 +89,7 @@ def extraction() -> dict:
                 "type": "suspension",
                 "label": "Nine-month licence suspension",
                 "description": "Licence suspended for nine months.",
-                "status": "imposed",
+                "event_status": "imposed",
                 "amount": None,
                 "duration": "nine months",
                 "period": {
@@ -111,6 +113,7 @@ def test_accepts_graph_extraction() -> None:
     assert result.mentions[0].aliases == ["Timmy Wong"]
     assert result.risks[0].type.family == RiskFamily.SYSTEMS_CONTROLS
     assert result.actions[0].type.family == ActionFamily.SANCTION
+    assert result.actions[0].event_status == "imposed"
     assert result.actions[0].period.start.isoformat() == "2026-07-03"
     assert "family" not in serialized["risks"][0]
     assert "family" not in serialized["actions"][0]
@@ -127,6 +130,7 @@ def test_period_uses_its_exact_text_as_missing_evidence() -> None:
     [
         (("risks", 0, "type"), "authorization_failure"),
         (("actions", 0, "type"), "license_suspension"),
+        (("mentions", 0, "identity"), "probable_name"),
         (
             ("mentions", 0, "geographies"),
             [{"name": "Hong Kong", "role": "name_reference", "evidence": {"quote": "Mr Wong Tim Hi"}}],
@@ -161,9 +165,9 @@ def test_rejects_uncontrolled_taxonomy(path: tuple[str | int, ...], value: objec
 )
 def test_preserves_action_lifecycle(status: str) -> None:
     data = extraction()
-    data["actions"][0]["status"] = status
+    data["actions"][0]["event_status"] = status
 
-    assert ReleaseExtraction.model_validate(data).actions[0].status == status
+    assert ReleaseExtraction.model_validate(data).actions[0].event_status == status
 
 
 @pytest.mark.parametrize(
