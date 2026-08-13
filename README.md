@@ -5,7 +5,7 @@ Browse the graph directly, ask a grounded research agent, or query the same
 validated data through a public read-only API.
 
 <p align="center">
-  <img src="docs/screenshots/demo.gif" alt="Sapphire graph exploration, symbology, node inspection, and grounded research-agent interaction" width="800">
+  <img src="docs/screenshots/demo.gif" alt="Sapphire graph exploration tracing Futu Securities to Mr Ng Yu with grounded agent research" width="800">
 </p>
 
 ```text
