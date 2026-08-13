@@ -37,9 +37,11 @@ class SyncResult:
 
 
 class SfcClient:
-    def __init__(self, timeout: float = 20, retries: int = 3) -> None:
+    def __init__(self, timeout: float = 20, attempts: int = 3) -> None:
+        if attempts < 1:
+            raise ValueError("attempts must be positive")
         self.timeout = timeout
-        self.retries = retries
+        self.attempts = attempts
 
     def search(self, page: int, language: str) -> dict[str, Any]:
         payload = {
@@ -67,7 +69,7 @@ class SfcClient:
             method="POST" if body is not None else "GET",
         )
 
-        for attempt in range(self.retries):
+        for attempt in range(self.attempts):
             try:
                 with urlopen(request, timeout=self.timeout) as response:
                     data = json.load(response)
@@ -81,10 +83,10 @@ class SfcClient:
             except (URLError, TimeoutError, json.JSONDecodeError) as error:
                 last_error = error
 
-            if attempt + 1 < self.retries:
+            if attempt + 1 < self.attempts:
                 time.sleep(2**attempt)
 
-        raise SfcError(f"failed after {self.retries} attempts: {request.full_url}") from last_error
+        raise SfcError(f"failed after {self.attempts} attempts: {request.full_url}") from last_error
 
 
 def sync(

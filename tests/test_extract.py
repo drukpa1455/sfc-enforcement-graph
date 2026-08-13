@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -14,6 +15,7 @@ from pydantic_ai.usage import RunUsage
 from sfc_enforcement_graph.extract import (
     ExtractError,
     bounded_model,
+    bounded_results,
     extract_release,
     extract_releases,
     extract_text,
@@ -253,6 +255,22 @@ def test_parallel_extraction_has_one_database_writer(tmp_path: Path, monkeypatch
 
         assert (extracted, skipped) == (2, 0)
         assert database.connection.execute("SELECT count(*) FROM extractions").fetchone()[0] == 2
+
+
+def test_parallel_work_queue_never_exceeds_worker_capacity() -> None:
+    consumed = 0
+
+    def values():
+        nonlocal consumed
+        for value in range(20):
+            consumed += 1
+            yield value
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        results = bounded_results(pool, lambda value: value, values(), 2)
+        first = next(results)
+        assert consumed == 2
+        assert sorted([first, *results]) == list(range(20))
 
 
 def test_parallel_extraction_saves_successes_before_reporting_failures(

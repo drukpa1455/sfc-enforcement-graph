@@ -347,10 +347,17 @@ def label(value: str) -> str:
 def write_graph(path: Path, graph: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as temporary:
-        json.dump(graph, temporary, ensure_ascii=False, indent=2)
-        temporary.write("\n")
+        temporary.write(graph_json(graph))
         temporary_path = Path(temporary.name)
     os.replace(temporary_path, path)
+
+
+def graph_json(graph: dict[str, Any]) -> str:
+    return json.dumps(graph, ensure_ascii=False, indent=2) + "\n"
+
+
+def graph_is_current(path: Path, graph: dict[str, Any]) -> bool:
+    return path.is_file() and path.read_text(encoding="utf-8") == graph_json(graph)
 
 
 def main() -> None:
@@ -359,9 +366,15 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("data/graph.json"))
     parser.add_argument("--model", default=os.environ.get("AZURE_OPENAI_MODEL", DEFAULT_MODEL))
     parser.add_argument("--language", default="EN")
+    parser.add_argument("--check", action="store_true", help="Fail when the output is not the current projection.")
     args = parser.parse_args()
     with Database(args.db) as database:
-        write_graph(args.output, export_graph(database, args.model, args.language))
+        graph = export_graph(database, args.model, args.language)
+    if args.check:
+        if not graph_is_current(args.output, graph):
+            raise SystemExit(f"error: {args.output} is stale; run sfc-graph-export")
+        return
+    write_graph(args.output, graph)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 from pathlib import Path
+from urllib.error import URLError
 
 import pytest
 
-from sfc_enforcement_graph.sync import PAGE_SIZE, SfcError, sync
+from sfc_enforcement_graph.sync import PAGE_SIZE, SfcClient, SfcError, sync
 from sfc_enforcement_graph.store import Database, related_release_refs
 
 
@@ -121,3 +122,20 @@ def test_release_links_are_derived_from_raw_html(tmp_path: Path) -> None:
         ).fetchall()
 
     assert [row["target_ref"] for row in links] == ["24PR2", "25PR1"]
+
+
+def test_client_attempt_budget_is_exact(monkeypatch) -> None:
+    calls = 0
+
+    def fail(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise URLError("offline")
+
+    monkeypatch.setattr("sfc_enforcement_graph.sync.urlopen", fail)
+    monkeypatch.setattr("sfc_enforcement_graph.sync.time.sleep", lambda _: None)
+
+    with pytest.raises(SfcError, match="failed after 3 attempts"):
+        SfcClient(attempts=3).search(0, "EN")
+
+    assert calls == 3
