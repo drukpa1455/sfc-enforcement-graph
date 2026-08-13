@@ -68,7 +68,7 @@ def project_release(
     links: list[dict[str, Any]],
 ) -> None:
     mention_ids = {
-        mention.id: entity_id(mention_kind(mention.type), mention.name, ref, mention.id)
+        mention.id: entity_id(mention_kind(mention.type), mention.identity, mention.name, ref, mention.id)
         for mention in extraction.mentions
     }
     matter_ids = {matter.id: f"matter:{ref}:{matter.id}" for matter in extraction.matters}
@@ -85,7 +85,7 @@ def project_release(
                 mention.description,
                 ref,
                 {
-                    "identity": ["exact_name" if mention_id.startswith("entity:") else "release_local"],
+                    "identity": ["normalized_name" if mention_id.startswith("entity:") else "release_local"],
                     "involvement": mention.involvement,
                 },
                 [
@@ -192,7 +192,7 @@ def project_release(
                 {
                     "action_family": [action.type.family.value],
                     "action_type": [action.type.value],
-                    "action_status": [action.status.value],
+                    "event_status": [action.event_status.value],
                 },
                 action_facts(action, ref),
             ),
@@ -221,8 +221,8 @@ def mention_kind(kind: str) -> str:
     return {"person_group": "group", "financial_instrument": "instrument"}.get(kind, kind)
 
 
-def entity_id(kind: str, name: str, ref: str, local_id: str) -> str:
-    if kind not in MERGED_ENTITY_KINDS or not name[:1].isupper():
+def entity_id(kind: str, identity: str, name: str, ref: str, local_id: str) -> str:
+    if kind not in MERGED_ENTITY_KINDS or identity != "named":
         return f"mention:{ref}:{local_id}"
     identity = f"{kind}\0{normalize_name(name)}".encode()
     return f"entity:{kind}:{hashlib.sha256(identity).hexdigest()[:16]}"
@@ -230,7 +230,8 @@ def entity_id(kind: str, name: str, ref: str, local_id: str) -> str:
 
 def normalize_name(name: str) -> str:
     normalized = unicodedata.normalize("NFKC", name).casefold()
-    return re.sub(r"\s+", " ", normalized).strip()
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized.removeprefix("the ")
 
 
 def add_node(nodes: dict[str, dict[str, Any]], candidate: dict[str, Any]) -> None:
@@ -238,6 +239,9 @@ def add_node(nodes: dict[str, dict[str, Any]], candidate: dict[str, Any]) -> Non
     if existing is None:
         nodes[candidate["id"]] = candidate
         return
+    if candidate["facets"].get("identity") == ["normalized_name"]:
+        existing["label"] = min((existing["label"], candidate["label"]), key=lambda value: (len(value), value.casefold()))
+        existing["summary"] = f"Named {existing['kind']} in multiple SFC enforcement releases."
     merge_unique(existing["releaseRefs"], candidate["releaseRefs"])
     merge_unique(existing["facts"], candidate["facts"])
     for name, values in candidate["facets"].items():

@@ -17,7 +17,6 @@ from pydantic_ai.models import Model, infer_model
 from pydantic_ai.providers import Provider, infer_provider_class
 from pydantic_ai.usage import RunUsage, UsageLimits
 from sfc_enforcement_graph.models import EXTRACTION_VERSION, ReleaseExtraction
-from sfc_enforcement_graph.sync import SfcError
 from sfc_enforcement_graph.store import Database
 
 DEFAULT_MODEL = "gpt-5.6-sol"
@@ -28,6 +27,7 @@ INSTRUCTIONS = """You extract a high-recall, evidence-backed graph from an SFC e
 Rules:
 - Use only the supplied release. Do not add external knowledge or infer unstated facts.
 - Extract every named or distinctly described person, organization, fund, and financial instrument as a source-relative mention. Canonical entity resolution happens later.
+- Mark identity as named only when the source identifies a specific real-world person, organization, fund, or financial instrument. Mark unnamed, generic, collective, and context-dependent references as descriptive regardless of capitalization. 'The Court', 'the Police', 'his wife', 'a client', and 'shares' are descriptive unless the source supplies a specific name.
 - Treat a company or other issuer as an organization. Treat its shares, bonds, accounts, and other securities as financial instruments; a stock code does not turn the issuer into an instrument.
 - Extract each named entity separately. Use one grouped mention only when the release withholds individual names.
 - Include regulators, courts, affected parties, employers, counterparties, issuers, and spokespeople as secondary mentions.
@@ -44,7 +44,7 @@ Rules:
 - Use aliases only for alternative names or abbreviations explicitly introduced with wording such as 'also known as', 'formerly known as', or a parenthetical abbreviation. A surname-only later mention is not an alias.
 - Do not emit duplicate relationships that express the same underlying role or affiliation.
 - For actions, distinguish the actor, the legally bound target, and other affected entities. Receiving a notice does not imply misconduct. Preserve procedural changes such as commencement, adjournment, withdrawal, revocation, and completion.
-- Emit one action for one source-described action. Group targets that share the same type, status, amount, duration, and evidentiary basis; separate actions when those facts differ. Distinct claims or proceedings under different legal provisions may remain separate.
+- Emit one action for one source-described action. Group targets that share the same type, event status, amount, duration, and evidentiary basis; separate actions when those facts differ. Distinct claims or proceedings under different legal provisions may remain separate.
 - Emit an action only when the release explicitly says it was issued, imposed, sought, granted, agreed, ordered, or remains pending. Do not turn generic words such as 'disciplinary action' or 'sanction' into a specific reprimand, fine, or other action.
 - Never infer an authority or action actor. Leave its ID list empty when passive wording does not identify one.
 - Capture uncommon facts as source-specific attributes rather than dropping them; attributes are not a canonical taxonomy.
@@ -354,7 +354,7 @@ def main() -> None:
                 workers=args.workers,
                 retry_failures=args.retry_failures,
             )
-    except (ExtractError, SfcError, json.JSONDecodeError) as error:
+    except (ExtractError, json.JSONDecodeError) as error:
         raise SystemExit(f"error: {error}") from None
     print(f"extracted={extracted} skipped={skipped} model={args.model}")
 
