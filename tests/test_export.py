@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sfc_enforcement_graph.export import export_graph
+from sfc_enforcement_graph.export import export_graph, graph_is_current, graph_json, write_graph
 from sfc_enforcement_graph.models import EXTRACTION_VERSION
 from sfc_enforcement_graph.store import Database
 from test_models import extraction
@@ -162,3 +162,15 @@ def test_ignores_stale_extraction(tmp_path: Path) -> None:
         database.save_release(new)
 
         assert export_graph(database, "test-model") == {"nodes": [], "links": [], "releases": []}
+
+
+def test_graph_serialization_is_canonical(tmp_path: Path) -> None:
+    graph = {"nodes": [], "links": [], "releases": []}
+    output = tmp_path / "graph.json"
+
+    write_graph(output, graph)
+
+    assert output.read_text(encoding="utf-8") == graph_json(graph)
+    assert graph_is_current(output, graph)
+    assert not graph_is_current(output, {**graph, "nodes": [{"id": "new"}]})
+    assert not graph_is_current(tmp_path / "missing.json", graph)

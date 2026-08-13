@@ -96,6 +96,7 @@ and browser state are replaceable projections with explicit rebuild paths.
 
 ```bash
 uv run pytest -q
+uv run sfc-graph-export --check
 npm test
 npm run lint
 npm run build

@@ -5,9 +5,11 @@ import concurrent.futures
 import json
 import os
 import re
+from collections.abc import Callable, Iterable, Iterator
 from html.parser import HTMLParser
+from itertools import islice
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import TypeAdapter
 from pydantic_ai import Agent
@@ -53,6 +55,9 @@ Rules:
 
 extractor = Agent(output_type=ReleaseExtraction, instructions=INSTRUCTIONS)
 usage_adapter = TypeAdapter(RunUsage)
+T = TypeVar("T")
+R = TypeVar("R")
+END = object()
 
 
 class ExtractError(RuntimeError):
@@ -231,10 +236,7 @@ def extract_releases(
     extracted = 0
     failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(run, raw): raw for raw in pending}
-        for future in concurrent.futures.as_completed(futures):
-            raw = futures[future]
-            raw, extraction, result, error, usage = future.result()
+        for raw, extraction, result, error, usage in bounded_results(pool, run, pending, workers):
             if error is not None:
                 diagnostic = failure_diagnostic(error)
                 database.save_extraction_failure(
@@ -265,6 +267,25 @@ def extract_releases(
             f"{len(failures)} extraction(s) failed; first was {ref}: {failure_diagnostic(error)}"
         ) from error
     return extracted, skipped
+
+
+def bounded_results(
+    pool: concurrent.futures.Executor,
+    function: Callable[[T], R],
+    values: Iterable[T],
+    capacity: int,
+) -> Iterator[R]:
+    values = iter(values)
+    futures = {pool.submit(function, value) for value in islice(values, capacity)}
+    while futures:
+        done, futures = concurrent.futures.wait(
+            futures, return_when=concurrent.futures.FIRST_COMPLETED
+        )
+        for future in done:
+            yield future.result()
+            value = next(values, END)
+            if value is not END:
+                futures.add(pool.submit(function, value))
 
 
 def require_string(data: dict[str, Any], field: str) -> str:

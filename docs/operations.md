@@ -18,7 +18,7 @@ uv run sfc-graph-export
 
 Extraction defaults to one stale or missing release. `--full` processes every
 stale or missing release; `--force` intentionally replaces current outputs.
-`--workers N` bounds concurrent model calls while SQLite writes remain
+`--workers N` bounds active and queued model work while SQLite writes remain
 serialized. Each release permits at most one provider request and no transport
 retry; failed releases remain stale for deliberate replay. Use `--ref REFERENCE`
 for a specific release.
@@ -32,7 +32,7 @@ deliberately replays them; a later success clears the matching failure.
 | Artifact | Role | Repair |
 |---|---|---|
 | `data/sfc.sqlite3` | Canonical raw releases, extractions, failures, versions, and sync state | Re-sync changed sources; re-extract stale outputs |
-| `data/graph.json` | Replaceable application and API projection | Run `sfc-graph-export` |
+| `data/graph.json` | Replaceable application and API projection | Run `sfc-graph-export`; verify with `sfc-graph-export --check` |
 | `public/docs/` | Ignored generated documentation | Run `npm run docs` |
 | `dist/` | Ignored production application | Run `npm run build` |
 
@@ -70,6 +70,7 @@ budget, and a hard provider spend limit before enabling public chat.
 
 ```bash
 uv run pytest -q
+uv run sfc-graph-export --check
 npm test
 npm run lint
 npm run build

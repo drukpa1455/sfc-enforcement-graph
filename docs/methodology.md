@@ -19,8 +19,8 @@ replaceable Graphology analytics
 The sync client reads the SFC enforcement-news search and content endpoints.
 SQLite stores the release body, language, issue date, modification time, and
 full-sync state. Changed version metadata triggers a new download; unchanged
-releases are not rewritten. Requests have bounded timeouts and three retries for
-transient failures.
+releases are not rewritten. Requests have bounded timeouts and three total
+attempts for transient failures.
 
 ### 2. Extract
 
