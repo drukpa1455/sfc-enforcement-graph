@@ -10,3 +10,12 @@ test('HTTP server treats API trailing slashes canonically', async () => {
     assert.match(response.headers.get('content-type') ?? '', /application\/json/)
   }
 })
+
+test('HTTP server redirects only the bare docs path', async () => {
+  const bare = await http.request('/docs')
+  const canonical = await http.request('/docs/')
+
+  assert.equal(bare.status, 302)
+  assert.equal(bare.headers.get('location'), '/docs/')
+  assert.notEqual(canonical.status, 302)
+})
